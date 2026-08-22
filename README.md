@@ -180,8 +180,7 @@ whole restore path on a new machine.
 
 | Tool | Pin |
 |---|---|
-| `azure-cli`, `claude`, `cmake`, `codex`, `gh`, `go`, `uv`, `zig` | `latest` |
-| `github:can1357/oh-my-pi`, `oh-my-pi` | `latest` |
+| `azure-cli`, `claude`, `cmake`, `codex`, `gh`, `go`, `oh-my-pi`, `uv`, `zig` | `latest` |
 | `bun` | `1` |
 | `dotnet` | `10`, `8` |
 | `node` | `26`, `24`, `22` |
@@ -191,14 +190,17 @@ whole restore path on a new machine.
 Runtimes are pinned to a major and listed newest-first — mise installs every
 version in the list and treats the first as the default, so a project
 `mise.toml` asking for an older major finds it already on disk. The CLIs float,
-since they are self-contained binaries that are only useful current. The
-`github:` backend installs from release assets rather than a registry entry, so
-it needs the full `owner/repo` as the key.
+since they are self-contained binaries that are only useful current. `oh-my-pi`
+is a registry alias for the `github:can1357/oh-my-pi` backend, which installs
+from release assets rather than from a version-managed tool source; the short
+name is the one to use, since spelling the backend out declares the same tool
+under a second name and mise installs it twice.
 
 `[settings] minimum_release_age = "7d"` is the counterweight to all that
 floating: a `latest` resolved the day it ships is a supply-chain window, so mise
 ignores any release younger than a week. It applies to every tool here,
-including the `github:` backend. `omarchy update` overrides it for one run —
+including the `github:` backend behind `oh-my-pi`. `omarchy update` overrides it
+for one run —
 `omarchy-update-mise` calls `MISE_MINIMUM_RELEASE_AGE=0 mise up`, which is what
 the `mup` alias does by hand.
 
@@ -240,7 +242,7 @@ directory, so global changes need `mise use -g`.
 ## Oh My Pi agent config
 
 `dot_omp/private_agent/private_config.yml` → `~/.omp/agent/config.yml`, the
-settings file for the `oh-my-pi` CLI that the `github:can1357/oh-my-pi` mise
+settings file for the `oh-my-pi` CLI that the same-named mise
 entry installs. It holds only the keys that differ from the defaults: the
 `nerd` symbol preset with the `pi` composer shape, both theme slots pinned to
 the Omarchy-derived theme below, `anthropic/claude-opus-5:medium` as the default
