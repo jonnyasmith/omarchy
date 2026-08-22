@@ -429,6 +429,75 @@ Two things to know when editing this:
   by `omarchy bar move`, so expect it to drift; re-`chezmoi add` after
   deliberate layout changes.
 
+## Dev ports
+
+A list of the local dev servers that are actually listening, labelled by the
+project each one was started from, one click from opening in the browser.
+
+| Path | What |
+|---|---|
+| `dot_config/omarchy/plugins/jonny.ports/executable_ports.sh` | the whole scan; usable on its own |
+| `dot_config/omarchy/plugins/jonny.ports/` | the bar widget (`manifest.json` + `BarWidget.qml`) |
+
+```bash
+~/.config/omarchy/plugins/jonny.ports/ports.sh          # 3000-9999
+~/.config/omarchy/plugins/jonny.ports/ports.sh 1024 65535
+```
+
+It prints one TSV row per port — `port`, label, detail — and the widget only
+draws that. Everything awkward lives in the script, where it can be run and
+diffed on its own.
+
+`ss -ltnpH` is the only source that sees every listener, container or not,
+with no privilege and no Docker daemon. What it cannot do is name them: a Vite
+server reports as `node-MainThread`, which tells you nothing when two projects
+are up. So the label comes from the process's own
+`/proc/<pid>/cwd` instead — the project directory is the thing you recognise —
+with `/proc/<pid>/cmdline` as the detail line. That only works for processes we
+own. A container's port belongs to root, so those names come from `docker ps`,
+and only when `/run/docker.pid` already exists: `docker.service` here is
+socket-activated and disabled, and waking it to draw a bar widget would defeat
+the point of that.
+
+Three details that are easy to get wrong:
+
+- **One port, two sockets.** IPv4 and IPv6 binds are separate `ss` rows. The
+  first labelled row for a port wins and the rest are dropped, or portainer
+  shows up twice.
+- **Always `localhost`, never the bound address.** Vite binds `[::1]` only, so
+  a URL built from the observed address as `127.0.0.1:5173` is a dead link.
+- **A socket has no scheme.** `ss` cannot tell you that a port wants https, so
+  ports that do are listed in `httpsPorts` on the `shell.json` entry.
+
+Settings, all optional, inline on the `bar.layout` entry:
+
+| Key | Default | What |
+|---|---|---|
+| `minPort` / `maxPort` | `3000` / `9999` | port window, which is what keeps `:53` and `:631` out |
+| `interval` | `10` | seconds between scans while collapsed |
+| `openInterval` | `2` | seconds between scans while the popup is open |
+| `httpsPorts` | `[]` | ports whose URL should be `https://` |
+
+Widget gestures:
+
+| Gesture | Action |
+|---|---|
+| left | popup: one row per port, click a row to open it |
+| middle | rescan now |
+
+The popup is also summonable, so it can take a keybind:
+`omarchy-shell shell toggle jonny.ports`.
+
+The widget hides itself when nothing is listening, so it costs no bar space on
+a machine that is not serving anything. It does still scan on the collapsed
+interval to know that — the count has to come from somewhere — but the scan is
+one `ss` call and a `readlink` per port, and it does not run per second.
+
+Clicking a row runs `omarchy-launch-or-focus-webapp`, which prefers an existing
+window for that URL. With a normal Chromium session already running, Chromium
+ignores `--app=` and opens a tab in that session instead, so the focus-existing
+half only works when the URL got its own app window.
+
 ## Omarchy agent skill: fingerprint guide
 
 `.chezmoitemplates/omarchy/fingerprint.md` is the canonical copy of the

@@ -83,6 +83,12 @@ See `README.md` for the per-item detail. Summary:
   `dot_config/omarchy/shell.json` — the caffeine keep-awake button: script,
   bar widget, its preset submenu, and the bar layout that places it. Bar widget
   QML edits need `omarchy restart shell`, not just a save.
+- `dot_config/omarchy/plugins/jonny.ports/` — the dev-ports widget: which local
+  servers are listening, labelled from `/proc/<pid>/cwd` rather than the useless
+  process name, click a row to open it. `ports.sh` does the scanning and runs
+  standalone; the QML only draws its TSV. Container ports are named from
+  `docker ps`, but only when `/run/docker.pid` already exists, so drawing the
+  bar never wakes a sleeping daemon.
 - `dot_bashrc` + `dot_config/blesh/init.sh` + `dot_config/bash/` — ble.sh (the
   zsh-autosuggestions equivalent), its settings, its fzf/zoxide integrations,
   and the aliases ported from the old zsh setup. Requires `yay -S blesh-git`;
