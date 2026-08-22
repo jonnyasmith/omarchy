@@ -137,6 +137,30 @@ rendered anything but `$jobs`.
 `command_timeout = 200` caps per-module work; the git modules are the only ones
 that can hit it, on a large repo.
 
+## mise global tools
+
+`dot_config/mise/config.toml` is the global [mise](https://mise.jdx.dev/) tool
+set — the one mise reads for every directory that has no closer config, and the
+only mise file tracked here. Omarchy's bash rc already runs `mise activate`, so
+nothing in this repo wires it up; `chezmoi apply` then `mise install` is the
+whole restore path on a new machine.
+
+| Tool | Pin |
+|---|---|
+| `claude`, `codex`, `gh` | `latest` |
+| `github:can1357/oh-my-pi` | `latest` |
+| `node` | `26.7.0` |
+
+`node` is pinned exact because it is the runtime everything else resolves
+against; the CLIs float, since they are self-contained binaries that are only
+useful current. The `github:` backend installs from release assets rather than a
+registry entry, so it needs the full `owner/repo` as the key.
+
+`mise up` bumps the floating ones and rewrites this file in place — it is the
+live file that changes, so re-`chezmoi add ~/.config/mise/config.toml`
+afterwards. Per-project `mise.toml` files stay with their projects and are not
+managed here.
+
 ## Hyprland input
 
 `dot_config/hypr/input.lua` is the user-side Hyprland input override, loaded
