@@ -111,3 +111,6 @@ See `README.md` for the per-item detail. Summary:
   skill tree after every `omarchy update` wipes it.
 - `run_after_omarchy-fingerprint-pam.sh` — restores the fingerprint PAM stacks
   in `/etc/pam.d/`. Fails open by construction; read the README before editing.
+- `run_after_portainer.sh` — writes `/opt/portainer/docker-compose.yml` and runs
+  the Portainer container on http://localhost:9000. Gated on `docker info`, so
+  it defers rather than fails before the `docker` group re-login.

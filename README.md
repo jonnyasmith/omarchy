@@ -479,6 +479,30 @@ Every edit fails open by construction: the gate is
 reader or a dead driver costs a password prompt, never access. Verify with
 `sudo -k; sudo id -u`, which should print `0` after a touch.
 
+## Portainer
+
+`run_after_portainer.sh` is the one script here that runs a container rather
+than configuring the machine. It writes `/opt/portainer/docker-compose.yml` —
+outside `$HOME`, hence a script and not a target file — and brings the stack up
+on <http://localhost:9000>.
+
+Docker itself is not installed by this repo; the script is a no-op without it.
+`docker info` is the gate and doubles as the group-membership probe: on the
+apply that adds this account to `docker` the socket exists and the shell still
+cannot read it, so the script defers to the next apply instead of failing. The
+compose file is staged in a tempdir and compared before it is installed, so an
+apply with nothing to do raises no polkit prompt, and `docker compose up -d`
+runs only when the file changed or nothing answers to the name `portainer` —
+`up -d` talks to the registry, which is not worth doing on every apply.
+
+`pkexec install`, not `sudo`, per rule 5 in `AGENTS.md`: an apply can be driven
+by an agent with no terminal to type a password into. A declined prompt, an
+unreachable daemon or a registry outage all exit 0.
+
+Portainer's first-run admin account is created at <http://localhost:9000> and
+the window times out if it is left sitting; `docker restart portainer` reopens
+it.
+
 ## SSH and the 1Password agent
 
 Ported from the previous multi-OS dotfiles, minus its macOS/Windows/WSL
