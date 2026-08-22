@@ -180,7 +180,7 @@ whole restore path on a new machine.
 
 | Tool | Pin |
 |---|---|
-| `claude`, `codex`, `gh`, `zoxide` | `latest` |
+| `claude`, `codex`, `gh`, `pnpm`, `zoxide` | `latest` |
 | `github:can1357/oh-my-pi` | `latest` |
 | `node` | `26.7.0` |
 
