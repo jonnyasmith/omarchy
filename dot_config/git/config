@@ -31,6 +31,13 @@
 	l    = log --pretty=format:'%C(bold blue)%h%C(reset) %C(reset)%s%C(reset) %C(bold red)%an%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)' --abbrev-commit --date=relative
 	ll   = l -10
 	lg   = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) %C(reset)%s%C(reset) %C(bold red)%an%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)'
+	# Identity overrides for what the automatic routing below cannot see: a
+	# personal fork of a work repo, a client repo outside the work orgs.
+	# Repo-local, so they never touch this file. The matching `git work` lives
+	# in config.local, which exists only on a machine that answered yes to the
+	# work prompt.
+	personal = config user.email jonny.asmith@gmail.com
+	whoami   = config user.email
 [init]
 	defaultBranch = master
 [pull]
@@ -55,3 +62,18 @@
 [user]
 	name = Jonny Smith
 	email = jonny.asmith@gmail.com
+
+# Work-org remote rewriting and the email switch, rendered from
+# config.local.tmpl out of the `chezmoi init` answers — which is how the
+# employer name stays out of this repo. Absent on a personal machine, and git
+# ignores an include whose target does not exist.
+#
+# Must stay below [user]: later values win, and what it pulls in switches the
+# email.
+[include]
+	path = config.local
+
+# Azure DevOps is work-only. The `v3/` prefix is required for the same `**`
+# reason as above — `...azure.com:**` matches nothing and fails silently.
+[includeIf "hasconfig:remote.*.url:git@ssh.dev.azure.com:v3/**"]
+	path = config.work

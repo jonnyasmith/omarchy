@@ -74,8 +74,11 @@ See `README.md` for the per-item detail. Summary:
   zsh-autosuggestions equivalent), its settings, its fzf/zoxide integrations,
   and the aliases ported from the old zsh setup. Requires `yay -S blesh-git`;
   every reference is guarded.
-- `dot_config/git/config` — git config, including the one-letter aliases the
-  bash `g*` aliases call.
+- `dot_config/git/config` + `config.local.tmpl` + `config.work.tmpl` — git
+  config, the one-letter aliases the bash `g*` aliases call, and the
+  work-account routing: `insteadOf` rewrites a work org's `github.com` remotes
+  onto the `github-work` ssh alias, and `includeIf hasconfig` swaps in the work
+  email. Renaming that alias means editing `~/.ssh/config` too.
 - `.chezmoi.toml.tmpl` — the only prompts in the repo: `work`, `workOrgs`,
   `workEmail`, answered once at `chezmoi init` and stored in
   `~/.config/chezmoi/chezmoi.toml`. See rule 7.

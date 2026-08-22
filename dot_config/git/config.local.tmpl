@@ -1,0 +1,40 @@
+{{- if and .work .workOrgs -}}
+# Work account routing, from the answers to `chezmoi init` — which is why no
+# employer name is tracked in this repo. Included by ~/.config/git/config, which
+# git parses in order: this file rewrites remotes and points at config.work, and
+# the identity itself is in config.work.
+#
+# Renders empty on a personal machine, and chezmoi removes a target that renders
+# empty, so the include in the tracked config finds nothing and git ignores it.
+#
+# `github-work` is a host alias defined in ~/.ssh/config, where it pins the work
+# 1Password key. ssh sees a hostname, never a repo, so this rewrite is the only
+# thing that makes a work clone use the work key. Renaming the alias means
+# editing it there too.
+{{ range $org := splitList "," .workOrgs }}
+{{- $org = trim $org }}
+{{- if $org }}
+[url "git@github-work:{{ $org }}/"]
+	insteadOf = git@github.com:{{ $org }}/
+	insteadOf = ssh://git@github.com/{{ $org }}/
+
+# All three spellings, because hasconfig matches the URL as *stored* in the
+# repo, before the rewrite above is applied — and a repo may have been cloned
+# straight from the alias. The trailing `/` is required: `**` is only
+# wildcard-magic directly after a slash, so `{{ $org }}**` matches nothing and
+# fails silently.
+[includeIf "hasconfig:remote.*.url:git@github.com:{{ $org }}/**"]
+	path = config.work
+[includeIf "hasconfig:remote.*.url:ssh://git@github.com/{{ $org }}/**"]
+	path = config.work
+[includeIf "hasconfig:remote.*.url:git@github-work:{{ $org }}/**"]
+	path = config.work
+{{ end }}
+{{- end }}
+{{- if .workEmail }}
+# The counterpart to `git personal` in the tracked config, for what a remote URL
+# cannot express: a personal fork of a work repo, a client repo outside the org.
+[alias]
+	work = config user.email {{ .workEmail }}
+{{ end }}
+{{- end -}}
