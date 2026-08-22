@@ -205,6 +205,22 @@ afterwards. Per-project `mise.toml` files stay with their projects and are not
 managed here; note that plain `mise use <tool>` writes one into the current
 directory, so global changes need `mise use -g`.
 
+## Oh My Pi agent config
+
+`dot_omp/private_agent/private_config.yml` → `~/.omp/agent/config.yml`, the
+settings file for the `oh-my-pi` CLI that the `github:can1357/oh-my-pi` mise
+entry installs. It holds only the keys that differ from the defaults: the
+`unicode` symbol preset with the `pi` composer shape, the `dark-tokyo-night`
+theme, `anthropic/claude-opus-5:medium` as the default model role, thinking
+blocks hidden, and the startup update check off. `setupVersion` is written by
+the tool's own first-run setup and marks it as already done.
+
+Both the directory and the file are `private_`, i.e. 0700/0600. Nothing secret
+is in this file, but the rest of `~/.omp/` — sessions, auth state — is not
+managed here and does not belong in a public repo, so the tighter mode is the
+safer default for a tree chezmoi creates. Anything else the tool writes under
+`~/.omp/` stays untracked.
+
 ## Neovim keymaps
 
 `dot_config/nvim/` holds two files layered on top of the `omarchy-nvim`

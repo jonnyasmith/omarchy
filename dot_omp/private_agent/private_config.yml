@@ -1,0 +1,14 @@
+symbolPreset: unicode
+composer: 
+  shape: pi
+theme: 
+  dark: dark-tokyo-night
+setupVersion: 2
+defaultThinkingLevel: medium
+modelRoles: 
+  default: anthropic/claude-opus-5:medium
+github: 
+  enabled: true
+hideThinkingBlock: true
+startup: 
+  checkUpdate: false
