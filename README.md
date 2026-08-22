@@ -180,24 +180,56 @@ whole restore path on a new machine.
 
 | Tool | Pin |
 |---|---|
-| `claude`, `codex`, `gh`, `pnpm`, `zoxide` | `latest` |
-| `github:can1357/oh-my-pi` | `latest` |
-| `node` | `26.7.0` |
+| `azure-cli`, `claude`, `cmake`, `codex`, `gh`, `go`, `uv`, `zig` | `latest` |
+| `github:can1357/oh-my-pi`, `oh-my-pi` | `latest` |
+| `bun` | `1` |
+| `dotnet` | `10`, `8` |
+| `node` | `26`, `24`, `22` |
+| `pnpm` | `11`, `10` |
+| `python` | `3.14`, `3.13` |
 
-`node` is pinned exact because it is the runtime everything else resolves
-against; the CLIs float, since they are self-contained binaries that are only
-useful current. The `github:` backend installs from release assets rather than a
-registry entry, so it needs the full `owner/repo` as the key.
+Runtimes are pinned to a major and listed newest-first — mise installs every
+version in the list and treats the first as the default, so a project
+`mise.toml` asking for an older major finds it already on disk. The CLIs float,
+since they are self-contained binaries that are only useful current. The
+`github:` backend installs from release assets rather than a registry entry, so
+it needs the full `owner/repo` as the key.
 
 `[settings] minimum_release_age = "7d"` is the counterweight to all that
 floating: a `latest` resolved the day it ships is a supply-chain window, so mise
 ignores any release younger than a week. It applies to every tool here,
-including the `github:` backend.
+including the `github:` backend. `omarchy update` overrides it for one run —
+`omarchy-update-mise` calls `MISE_MINIMUM_RELEASE_AGE=0 mise up`, which is what
+the `mup` alias does by hand.
 
-`zoxide` is the one entry that duplicates a pacman package — Omarchy installs
-`zoxide 0.10.0-1` and its bash rc initialises it. The mise shim wins on `PATH`,
-so the pinned copy is the one that runs, and the pacman package is what a
-machine without `mise install` falls back to. Both are currently 0.10.0.
+### Why nothing here duplicates a pacman package
+
+Omarchy pacstraps its own CLI set in
+`/usr/share/omarchy/install/omarchy-base.packages` — `bat`, `btop`,
+`fastfetch`, `fzf`, `jq`, `lazygit`, `nvim`, `ripgrep`, `starship`, `tmux`,
+`zoxide`, `herdr`, and `mise` itself. None of those belong in this file, because
+PATH resolves them inconsistently:
+
+- `default/bash/init` runs `eval "$(mise activate bash)"`, which **prepends**
+  the install directory of every installed mise tool. Interactive shells get the
+  mise build.
+- `default/bash/env-bootstrap` appends `~/.local/share/mise/shims` **after**
+  `/usr/bin`, commented "so system binaries keep precedence". SSH commands,
+  `bash -lc`, and everything the uwsm session launches get the pacman build.
+
+Declaring a tool in both places means the terminal and the desktop session run
+different builds of it, while Omarchy's shipped configs — `btop.conf`,
+`starship.toml`, `lazygit/config.yml`, `tmux.conf`, and the `bat`/`fzf`/`zoxide`
+aliases in `default/bash/aliases` — were written against the pacman versions. So
+pacman owns what Omarchy ships and mise owns what it does not: language runtimes
+and dev CLIs.
+
+Wanting a newer build than Arch ships means removing the pacman package too, not
+stacking both, so the two PATH orders cannot disagree. Three of them cannot be
+removed at all: `jq` is a hard dependency of `omarchy`, `neovim` of
+`omarchy-nvim`, and `python` of some fifty packages including `gdb` and `meson`.
+The base list is only read by the ISO installer, so a package removed by hand
+does not return on `omarchy update` — though a future migration could re-add it.
 
 `mise up` bumps the floating ones and rewrites this file in place — it is the
 live file that changes, so `chezmoi re-add ~/.config/mise/config.toml`
