@@ -145,3 +145,32 @@ Smoke test — prints `0` after a touch, with no password:
 ```bash
 sudo -k; sudo id -u
 ```
+
+## Lid Closed
+
+`/usr/bin/omarchy-hw-laptop-closed` reads `/proc/acpi/button/lid/*/state` and
+exits `0` when the lid is shut, `1` when it is open. In the `sudo` and
+`polkit-1` stacks that means:
+
+- **closed** — gate succeeds, `success=1` skips exactly `pam_fprintd`, PAM goes
+  straight to the password prompt. No wait on the unreachable sensor.
+- **open** — gate fails, `default=ignore` falls through to `pam_fprintd`, with
+  the password still behind it as the fallback.
+
+Per surface:
+
+- **`sudo`** — password prompt immediately.
+- **Polkit dialogs** — `PolkitAgent.qml` refreshes lid state per request and
+  gates its own `fingerprintMode` on `!laptopClosed`, so it draws the password
+  field instead of the sensor icon.
+- **Lock screen** — `lock/Service.qml` runs `omarchy-lock-password` and
+  `omarchy-lock-fingerprint` as independent PAM flows, so the password field
+  never depends on the reader. It does *not* check lid state: `fingerprintPam`
+  keeps retrying via `fingerprintRetryTimer` against an unreachable sensor and
+  failing silently. Harmless, but expect it in logs.
+
+To test a branch without moving the lid, build a throwaway stack with the gate
+forced to a fixed outcome (`/bin/true` = closed, `/bin/false` = open) and drive
+it with any PAM client. A closed-lid stack must prompt only for a password; an
+open-lid stack must emit `Place your right index finger on the fingerprint
+reader`. Delete the test stacks from `/etc/pam.d/` afterwards.

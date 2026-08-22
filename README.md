@@ -2,13 +2,32 @@
 
 [chezmoi](https://www.chezmoi.io/) source directory. `sourceDir` is set to this
 repo in `~/.config/chezmoi/chezmoi.toml`, so no `~/.local/share/chezmoi` clone
-is involved.
+is involved and `chezmoi` works from any working directory.
 
 ```bash
 chezmoi apply          # Apply everything
 chezmoi diff           # Preview pending changes
 chezmoi status         # What is out of sync
+chezmoi cd             # Subshell in this repo
+chezmoi doctor         # Sanity-check the install
 ```
+
+`chezmoi status` always lists `R omarchy-fingerprint-skill.sh`. `R` means "this
+script runs on the next apply", which is by design (see below) — it is not
+drift. Judge state by `chezmoi apply` output, which is silent when there is
+nothing to do.
+
+## New Machine
+
+`sourceDir` is non-default, so name it explicitly instead of letting `init`
+pick `~/.local/share/chezmoi`:
+
+```bash
+chezmoi init --source ~/dev/dotfiles --apply <git-remote-url>
+```
+
+No remote is configured yet; add one with
+`git remote add origin <url> && git push -u origin master`.
 
 ## Omarchy agent skill: fingerprint guide
 
