@@ -1,0 +1,8 @@
+# Emacs-style list navigation in menus/popups (/ command menu, model selector,
+# session selector, agent hub). Arrow keys kept.
+tui.select.up: [up, ctrl+p]
+tui.select.down: [down, ctrl+n]
+
+# ctrl+p is the default for model cycling and is consumed by the prompt editor
+# before the autocomplete popup sees it, so it has to move.
+app.model.cycleForward: alt+shift+m
