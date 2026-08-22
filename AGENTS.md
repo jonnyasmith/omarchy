@@ -1,0 +1,68 @@
+# AGENTS.md
+
+## What this repo is
+
+The [chezmoi](https://www.chezmoi.io/) **source directory** for this machine —
+not a plain symlink farm. `sourceDir = "~/dev/dotfiles"` in
+`~/.config/chezmoi/chezmoi.toml`, so there is no `~/.local/share/chezmoi` clone
+and `chezmoi` works from any cwd.
+
+Editing a file here does **not** change the live system. `chezmoi apply` does.
+Editing the live file under `~/.config/` does not change this repo either;
+`chezmoi add <path>` restages it.
+
+Naming: `dot_config/hypr/input.lua` → `~/.config/hypr/input.lua`.
+`run_after_*` scripts execute on every apply. `.chezmoitemplates/` holds content
+included by templates, never applied on its own.
+
+No git remote is configured. Commits are local.
+
+## The machine
+
+| | |
+|---|---|
+| Host | `dell-xps`, Arch Linux |
+| Distro layer | [Omarchy](https://omarchy.org/) 4.0.0-1 |
+| Compositor | Hyprland, configured in **Lua** under `~/.config/hypr/` |
+| Shell/bar | Omarchy shell (Quickshell), `~/.config/omarchy/shell.json` |
+| Fingerprint | Goodix `27c6:533c`, proprietary libfprint TOD driver |
+
+Omarchy is an opinionated Arch + Hyprland distribution. It ships defaults in
+`/usr/share/omarchy/` and loads user overrides from `~/.config/` **after** them,
+so overrides are additive and only need the keys they change.
+
+## Rules
+
+1. **Read `skill://omarchy` before touching any desktop config** —
+   `~/.config/hypr/`, `~/.config/omarchy/`, terminal configs, themes, hooks.
+   It documents the `omarchy` CLI and the per-area topic guides.
+2. **Never write to `/usr/share/omarchy/`** by hand. It is package-owned and
+   `omarchy update` wipes it. Reading it is encouraged — that is where the
+   defaults you are overriding live. The one thing that *does* install there,
+   the fingerprint skill guide, goes through
+   `run_after_omarchy-fingerprint-skill.sh.tmpl` for exactly this reason.
+3. **Two-step for desktop changes:** edit the live file, verify it works, then
+   `chezmoi add` it. Verification on the real surface beats a staged diff.
+4. **After any Hyprland Lua change:** `hyprctl reload && hyprctl configerrors`,
+   and check the option actually took with `hyprctl getoption <path>`.
+5. **Privilege escalation:** `pkexec` for agent-run commands (no terminal to
+   type a password into), `sudo` only when a human is at an interactive shell.
+6. Prefer an `omarchy` subcommand over hand-editing when one exists
+   (`omarchy commands`, `omarchy <group> --help`).
+
+## Reading `chezmoi status`
+
+`R omarchy-fingerprint-pam.sh` and `R omarchy-fingerprint-skill.sh` are always
+listed. `R` means "runs on next apply" — by design, not drift. Judge state by
+`chezmoi apply`, which is silent when there is nothing to do.
+
+## What is currently managed
+
+See `README.md` for the per-item detail. Summary:
+
+- `dot_config/hypr/input.lua` — Hyprland input overrides (Caps Lock ⇄ Escape).
+- `.chezmoitemplates/omarchy/fingerprint.md` + its `run_after_` script — the
+  canonical fingerprint topic guide, reinstalled into the package-owned agent
+  skill tree after every `omarchy update` wipes it.
+- `run_after_omarchy-fingerprint-pam.sh` — restores the fingerprint PAM stacks
+  in `/etc/pam.d/`. Fails open by construction; read the README before editing.
