@@ -29,6 +29,17 @@ chezmoi init --source ~/dev/dotfiles --apply <git-remote-url>
 No remote is configured yet; add one with
 `git remote add origin <url> && git push -u origin master`.
 
+## Hyprland input
+
+`dot_config/hypr/input.lua` is the user-side Hyprland input override, loaded
+after Omarchy's defaults. It sets
+`kb_options = "caps:swapescape,shift:both_capslock_cancel"`, swapping Caps Lock
+and Escape. This drops Omarchy's default `compose:caps`, so Caps Lock is no
+longer the Compose key. Use `caps:escape` instead if Escape should not become
+Caps Lock.
+
+Validate after `chezmoi apply` with `hyprctl reload && hyprctl configerrors`.
+
 ## Omarchy agent skill: fingerprint guide
 
 `.chezmoitemplates/omarchy/fingerprint.md` is the canonical copy of the
