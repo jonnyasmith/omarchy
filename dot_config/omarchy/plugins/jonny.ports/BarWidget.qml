@@ -40,6 +40,9 @@ BarWidget {
   // Beyond the BMP, so QML's four-digit \u escapes cannot express it.
   readonly property string glyph: String.fromCodePoint(0xF048D)
 
+  // fa-external-link, inside the BMP and present in JetBrainsMono Nerd Font.
+  readonly property string tabGlyph: "\uf08e"
+
   readonly property string tooltip: {
     if (rows.length === 0) return "No dev servers listening"
     var names = []
@@ -55,6 +58,8 @@ BarWidget {
     return scheme + "://localhost:" + port
   }
 
+  // The row itself: a dedicated window with no tab strip or address bar, which
+  // is what `--app=` gets you, and what most dev servers want to be.
   function openPort(port) {
     if (!bar) return
     // shellQuote lives on the Commons Util singleton, not on the bar — the bar
@@ -62,6 +67,13 @@ BarWidget {
     // there throws out of the click handler without a trace.
     bar.run("omarchy-launch-or-focus-webapp "
       + Util.shellQuote("localhost:" + port) + " " + Util.shellQuote(urlFor(port)))
+  }
+
+  // The per-row button: an ordinary tab in whatever xdg-settings calls the
+  // default browser, for when you want devtools, the URL bar, or your session.
+  function openTab(port) {
+    if (!bar) return
+    bar.run("omarchy-launch-browser " + Util.shellQuote(urlFor(port)))
   }
 
   function publish(text) {
@@ -141,19 +153,36 @@ BarWidget {
           id: row
           required property var modelData
 
+          // Hovering the button leaves the row area, so the row would otherwise
+          // drop its highlight the moment you aim at the thing inside it.
+          readonly property bool highlighted: rowArea.containsMouse || tabArea.containsMouse
+
           width: list.width
           height: inner.implicitHeight + Style.space(10)
           radius: Style.spacing.labelGap
-          color: hover.containsMouse ? Style.selectedFillFor(root.bar.foreground, Color.accent) : "transparent"
-          borderSpec: hover.containsMouse ? Border.controlSpec("normal", root.bar.foreground, Color.accent) : Border.none()
+          color: highlighted ? Style.selectedFillFor(root.bar.foreground, Color.accent) : "transparent"
+          borderSpec: highlighted ? Border.controlSpec("normal", root.bar.foreground, Color.accent) : Border.none()
+
+          // Declared first, so the tab button -- a later sibling -- is above it
+          // and takes its own clicks. Reversed, the full-row area eats them.
+          MouseArea {
+            id: rowArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+              root.openPort(row.modelData.port)
+              root.popupOpen = false
+            }
+          }
 
           Column {
             id: inner
             anchors.left: parent.left
-            anchors.right: parent.right
+            anchors.right: tabButton.left
             anchors.verticalCenter: parent.verticalCenter
             anchors.leftMargin: row.borderLeft + Style.space(8)
-            anchors.rightMargin: row.borderRight + Style.space(8)
+            anchors.rightMargin: Style.space(6)
             spacing: Style.space(1)
 
             Row {
@@ -190,14 +219,31 @@ BarWidget {
             }
           }
 
-          MouseArea {
-            id: hover
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {
-              root.openPort(row.modelData.port)
-              root.popupOpen = false
+          Item {
+            id: tabButton
+            anchors.right: parent.right
+            anchors.rightMargin: row.borderRight + Style.space(6)
+            anchors.verticalCenter: parent.verticalCenter
+            width: Style.space(24)
+            height: width
+
+            Text {
+              anchors.centerIn: parent
+              text: root.tabGlyph
+              color: tabArea.containsMouse ? Color.accent : Qt.darker(root.bar.foreground, 1.5)
+              font.family: root.bar.fontFamily
+              font.pixelSize: Style.font.bodySmall
+            }
+
+            MouseArea {
+              id: tabArea
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                root.openTab(row.modelData.port)
+                root.popupOpen = false
+              }
             }
           }
         }

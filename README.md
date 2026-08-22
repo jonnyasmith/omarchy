@@ -487,7 +487,9 @@ Widget gestures:
 
 | Gesture | Action |
 |---|---|
-| left | popup: one row per port, click a row to open it |
+| left | popup: one row per port |
+| left on a row | open it as its own window |
+| left on a row's  | open it as a tab in the default browser |
 | middle | rescan now |
 
 The popup is also summonable, so it can take a keybind:
@@ -498,10 +500,18 @@ a machine that is not serving anything. It does still scan on the collapsed
 interval to know that — the count has to come from somewhere — but the scan is
 one `ss` call and a `readlink` per port, and it does not run per second.
 
-Clicking a row runs `omarchy-launch-or-focus-webapp`, which prefers an existing
-window for that URL. With a normal Chromium session already running, Chromium
-ignores `--app=` and opens a tab in that session instead, so the focus-existing
-half only works when the URL got its own app window.
+Each row opens two ways, because neither one is right for every server. The row
+itself runs `omarchy-launch-or-focus-webapp`, which gives the port a dedicated
+window with no tab strip and no address bar — right for a dashboard, wrong when
+you want devtools, and easily mistaken for a headless browser the first time it
+appears. The  button on the row runs `omarchy-launch-browser` instead, which
+is whatever `xdg-settings` calls the default browser, so the URL lands as an
+ordinary tab in the session you already have open.
+
+Two implementation notes. The row's full-width mouse area is declared *before*
+the button, because QML delivers a click to the last overlapping sibling, so the
+reverse order silently eats every button press. And the row highlight follows
+either area, since hovering the button leaves the row's own.
 
 ## Omarchy agent skill: fingerprint guide
 
