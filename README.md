@@ -102,6 +102,20 @@ The one-letter git aliases these call (`git a`, `git s`, `git l`, `git d`, …)
 came over into `dot_config/git/config` in the same pass. Neither half is much
 use alone.
 
+## Starship prompt
+
+`dot_config/starship.toml` is the prompt Omarchy's bash rc initialises.
+`format` is a single explicit string — directory, git branch, git status — so
+every module Starship enables by default (language versions, cloud contexts,
+`$cmd_duration`, …) is excluded by omission rather than disabled one by one.
+
+`$line_break` before `$character` puts the `❯` on its own line, leaving the
+full terminal width for the command regardless of how long the path and branch
+get. `add_newline = true` is separate: it is the blank line *above* the prompt.
+
+`command_timeout = 200` caps per-module work; the git modules are the only ones
+that can hit it, on a large repo.
+
 ## Hyprland input
 
 `dot_config/hypr/input.lua` is the user-side Hyprland input override, loaded
