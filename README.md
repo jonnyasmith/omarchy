@@ -148,6 +148,73 @@ Caps Lock.
 
 Validate after `chezmoi apply` with `hyprctl reload && hyprctl configerrors`.
 
+## Caffeine
+
+A keep-awake toggle, as a bar widget next to the battery. Three managed parts:
+
+| Path | What |
+|---|---|
+| `dot_local/bin/executable_caffeine` | the whole state machine; usable on its own |
+| `dot_config/omarchy/plugins/jonny.caffeine/` | the bar widget (`manifest.json` + `BarWidget.qml`) |
+| `dot_config/omarchy/extensions/omarchy-menu.jsonc` | the preset submenu the widget's right-click summons |
+
+```bash
+caffeine on            # indefinitely
+caffeine on 90m --lid  # 90 minutes, lid close held too
+caffeine off
+caffeine status --json
+```
+
+Omarchy has no suspend-on-idle at all: the shell's idle service only runs a
+screensaver at `idle.screensaver` and locks at `idle.lock`, both seconds, both
+in `~/.config/omarchy/shell.json`. So "stay awake" here means suppressing those
+two, which is what Omarchy's own stay-awake flag —
+`~/.local/state/omarchy/indicators/stay-awake` — already does. `caffeine`
+writes that same file rather than inventing a second source of truth, so it
+stays in lockstep with `omarchy toggle idle`, the built-in StayAwake indicator,
+and the Omarchy menu. The idle service watches that directory, so whoever
+writes it, everyone sees it.
+
+Expiry is a transient systemd **user** timer, the mechanism `omarchy reminder`
+already uses, so the deadline survives a shell restart and is inspectable with
+`systemctl --user list-timers caffeine-expire.timer`. The script publishes that
+deadline to `~/.local/state/omarchy/caffeine.json`; the widget watches that one
+file and ticks the countdown locally, so nothing polls and no subprocess runs
+per second.
+
+`--lid` is the only part that is not just the stay-awake flag. Lid close is
+logind's business (`HandleLidSwitch=suspend`) and ignores the flag entirely, so
+that mode additionally holds a real
+`systemd-inhibit --what=handle-lid-switch:idle:sleep` lock in a transient unit,
+released the moment caffeine stops. It shows a different glyph — a crossed-out
+`Zz` rather than the coffee cup — because a held lid inhibitor is how a laptop
+cooks itself in a bag, and it should never be ambiguous which mode is armed.
+
+Widget gestures:
+
+| Gesture | Action |
+|---|---|
+| left | toggle indefinitely |
+| right | preset submenu (15m / 30m / 1h / 2h / indefinite / lid) |
+| middle | drop the timer, stay awake indefinitely |
+| scroll | ±15 min on the live deadline |
+
+Scrolling down on an indefinite session sets a 15-minute window; scrolling
+below one minute turns it off.
+
+Two things to know when editing this:
+
+- **Bar widget QML changes need `omarchy restart shell`.** Saving under
+  `~/.config/omarchy/plugins/` logs `Local plugin changed, reloading` and
+  `omarchy-shell shell rescanPlugins` returns cleanly, but neither
+  re-instantiates an already-mounted bar widget. The old component keeps
+  running and the edit looks like it did nothing.
+- **`dot_config/omarchy/shell.json` is managed**, because that is where the bar
+  layout lives and the widget has to be listed there to appear at all. The
+  shell rewrites this file itself whenever the bar is reordered by dragging or
+  by `omarchy bar move`, so expect it to drift; re-`chezmoi add` after
+  deliberate layout changes.
+
 ## Omarchy agent skill: fingerprint guide
 
 `.chezmoitemplates/omarchy/fingerprint.md` is the canonical copy of the

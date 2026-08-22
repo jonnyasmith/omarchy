@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "jonny.caffeine",
+  "name": "Caffeine",
+  "version": "1.0.0",
+  "author": "jonny",
+  "description": "Keep-awake toggle with an optional countdown",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Caffeine",
+    "description": "Keep-awake toggle with an optional countdown",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

@@ -70,6 +70,11 @@ listed. `R` means "runs on next apply" — by design, not drift. Judge state by
 See `README.md` for the per-item detail. Summary:
 
 - `dot_config/hypr/input.lua` — Hyprland input overrides (Caps Lock ⇄ Escape).
+- `dot_local/bin/executable_caffeine` + `dot_config/omarchy/plugins/jonny.caffeine/`
+  + `dot_config/omarchy/extensions/omarchy-menu.jsonc` +
+  `dot_config/omarchy/shell.json` — the caffeine keep-awake button: script,
+  bar widget, its preset submenu, and the bar layout that places it. Bar widget
+  QML edits need `omarchy restart shell`, not just a save.
 - `dot_bashrc` + `dot_config/blesh/init.sh` + `dot_config/bash/` — ble.sh (the
   zsh-autosuggestions equivalent), its settings, its fzf/zoxide integrations,
   and the aliases ported from the old zsh setup. Requires `yay -S blesh-git`;

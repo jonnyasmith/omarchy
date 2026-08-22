@@ -1,0 +1,353 @@
+#!/bin/bash
+
+# caffeine - keep the desktop awake, indefinitely or for a fixed window.
+#
+# The awake flag is Omarchy's own stay-awake state file, so this stays in sync
+# with `omarchy toggle idle`, the built-in StayAwake bar indicator, and the
+# menu: the idle service watches that directory and reacts to whoever writes
+# it. Expiry is a transient systemd user timer, the mechanism `omarchy
+# reminder` already uses, so the deadline survives a shell restart and is
+# queryable with `systemctl --user list-timers`.
+#
+# Stay-awake alone only suppresses the screensaver and the idle lock. Lid close
+# is logind's business and ignores it, so --lid additionally holds a real
+# inhibitor lock for handle-lid-switch, idle, and sleep.
+
+set -uo pipefail
+
+STATE_DIR="$HOME/.local/state/omarchy/indicators"
+STATE_FILE="$STATE_DIR/stay-awake"
+# Deadline and lid state, published for the bar widget so it can watch one file
+# instead of polling this script. Deliberately outside STATE_DIR: the idle
+# service watches that directory and would re-probe on every write.
+CACHE_FILE="$HOME/.local/state/omarchy/caffeine.json"
+EXPIRE_UNIT="caffeine-expire"
+INHIBIT_UNIT="caffeine-inhibit"
+STEP_SECONDS=900
+MIN_SECONDS=60
+SELF="$(realpath "${BASH_SOURCE[0]}")"
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  caffeine on [DURATION] [--lid]   Stay awake, optionally until DURATION elapses
+  caffeine off                     Restore normal idle behaviour
+  caffeine toggle [DURATION] [--lid]
+  caffeine extend <±DURATION>      Move the live deadline (no-op when off)
+  caffeine status [--json]         Current state
+
+DURATION is 45s, 15m, 2h, 1h30m, or a bare number of minutes.
+EOF
+  exit "${1:-1}"
+}
+
+# --- state -------------------------------------------------------------------
+
+awake() { [[ -f $STATE_FILE ]]; }
+
+lid_held() { systemctl --user is-active --quiet "$INHIBIT_UNIT.service"; }
+
+# Epoch seconds of the pending expiry, empty when the session is indefinite.
+# list-timers reports the realtime projection even for a monotonic timer, which
+# is what makes a countdown possible without tracking the deadline separately.
+deadline() {
+  systemctl --user list-timers --all --output=json "$EXPIRE_UNIT.timer" 2>/dev/null |
+    jq -r 'first(.[] | select(.next != null and .next > 0) | .next / 1000000 | floor) // empty' 2>/dev/null
+}
+
+remaining() {
+  local end left
+  end=$(deadline)
+  [[ -z $end ]] && return 1
+  left=$((end - $(date +%s)))
+  ((left > 0)) || return 1
+  echo "$left"
+}
+
+# --- duration ----------------------------------------------------------------
+
+parse_duration() {
+  local input=${1,,} total=0 matched=0 num unit
+
+  [[ $input =~ ^[0-9]+$ ]] && {
+    echo $((input * 60))
+    return 0
+  }
+
+  while [[ $input =~ ^([0-9]+)([hms]) ]]; do
+    num=${BASH_REMATCH[1]}
+    unit=${BASH_REMATCH[2]}
+    case $unit in
+      h) total=$((total + num * 3600)) ;;
+      m) total=$((total + num * 60)) ;;
+      s) total=$((total + num)) ;;
+    esac
+    input=${input#"${BASH_REMATCH[0]}"}
+    matched=1
+  done
+
+  [[ -n $input || $matched -eq 0 ]] && return 1
+  echo "$total"
+}
+
+format_remaining() {
+  local seconds=$1 hours minutes
+
+  if ((seconds >= 3600)); then
+    hours=$((seconds / 3600))
+    minutes=$(((seconds % 3600) / 60))
+    printf '%dh%02d\n' "$hours" "$minutes"
+  elif ((seconds >= 60)); then
+    printf '%dm\n' $((seconds / 60))
+  else
+    printf '%ds\n' "$seconds"
+  fi
+}
+
+# --- units -------------------------------------------------------------------
+
+clear_timer() {
+  systemctl --user stop "$EXPIRE_UNIT.timer" "$EXPIRE_UNIT.service" >/dev/null 2>&1
+  systemctl --user reset-failed "$EXPIRE_UNIT.timer" "$EXPIRE_UNIT.service" >/dev/null 2>&1
+  return 0
+}
+
+arm_timer() {
+  clear_timer
+  systemd-run --user --quiet --unit="$EXPIRE_UNIT" \
+    --description="Caffeine expiry" \
+    --on-active="${1}s" --timer-property=AccuracySec=1s \
+    "$SELF" off --expired >/dev/null
+}
+
+hold_lid() {
+  lid_held && return 0
+  systemctl --user reset-failed "$INHIBIT_UNIT.service" >/dev/null 2>&1
+  systemd-run --user --quiet --unit="$INHIBIT_UNIT" \
+    --description="Caffeine lid inhibitor" \
+    systemd-inhibit --what=handle-lid-switch:idle:sleep \
+    --who=Caffeine --why="Caffeine is holding this session awake" \
+    sleep infinity >/dev/null
+}
+
+release_lid() {
+  systemctl --user stop "$INHIBIT_UNIT.service" >/dev/null 2>&1
+  systemctl --user reset-failed "$INHIBIT_UNIT.service" >/dev/null 2>&1
+  return 0
+}
+
+# Atomic so a watcher never reads a half-written file.
+publish_state() {
+  local end lid=false tmp
+  end=$(deadline)
+  lid_held && lid=true
+  mkdir -p "$(dirname "$CACHE_FILE")"
+  tmp=$(mktemp "$CACHE_FILE.XXXXXX") || return 0
+  jq -cn --arg deadline "${end:-}" --argjson lid "$lid" \
+    '{deadline:($deadline|if . == "" then null else tonumber end),lid:$lid}' >"$tmp" &&
+    mv -f "$tmp" "$CACHE_FILE" || rm -f "$tmp"
+  return 0
+}
+
+# --- output ------------------------------------------------------------------
+
+status_json() {
+  local left=-1 end="" active=false lid=false icon label tooltip
+
+  awake && active=true
+  lid_held && lid=true
+  if left=$(remaining); then end=$(deadline); else left=-1; fi
+
+  if [[ $active == true && $lid == true ]]; then
+    icon="󰒳"
+  elif [[ $active == true ]]; then
+    icon="󰅶"
+  else
+    icon="󰅶"
+  fi
+
+  if [[ $active == false ]]; then
+    label="$icon"
+    tooltip="Caffeine off — screensaver and lock run normally"
+  elif ((left >= 0)); then
+    label="$icon $(format_remaining "$left")"
+    tooltip="Awake for $(format_remaining "$left")"
+    [[ $lid == true ]] && tooltip="$tooltip, lid close held"
+  else
+    label="$icon"
+    tooltip="Awake indefinitely"
+    [[ $lid == true ]] && tooltip="$tooltip, lid close held"
+  fi
+
+  jq -cn \
+    --argjson active "$active" \
+    --argjson lid "$lid" \
+    --argjson remaining "$left" \
+    --arg deadline "$end" \
+    --arg text "$label" \
+    --arg tooltip "$tooltip" \
+    '{active:$active,lid:$lid,remaining:$remaining,deadline:($deadline|if . == "" then null else tonumber end),text:$text,tooltip:$tooltip,class:(if $active then "active" else "inactive" end)}'
+}
+
+report() {
+  if [[ ${JSON_OUTPUT:-0} == 1 ]]; then
+    status_json
+  elif awake; then
+    local left
+    if left=$(remaining); then
+      echo "on $(format_remaining "$left")"
+    else
+      echo "on"
+    fi
+  else
+    echo "off"
+  fi
+}
+
+# --- commands ----------------------------------------------------------------
+
+cmd_on() {
+  local duration="" lid=0 seconds arg
+
+  for arg in "$@"; do
+    case $arg in
+      --lid) lid=1 ;;
+      -*) usage ;;
+      *) duration=$arg ;;
+    esac
+  done
+
+  if [[ -n $duration ]]; then
+    seconds=$(parse_duration "$duration") || {
+      echo "caffeine: unrecognised duration: $duration" >&2
+      exit 1
+    }
+    ((seconds >= MIN_SECONDS)) || seconds=$MIN_SECONDS
+  fi
+
+  if [[ -n $duration ]]; then
+    arm_timer "$seconds"
+  else
+    clear_timer
+  fi
+
+  if ((lid)); then
+    hold_lid
+  else
+    release_lid
+  fi
+
+  publish_state
+
+  # Last, deliberately: flipping the state file is what wakes the idle service
+  # and every bar widget watching it, so the timer, the inhibitor, and the
+  # published deadline have to be in place before anyone is told to look.
+  mkdir -p "$STATE_DIR"
+  touch "$STATE_FILE"
+
+  report
+}
+
+cmd_off() {
+  local expired=0
+  [[ ${1:-} == --expired ]] && expired=1
+
+  rm -f "$STATE_FILE"
+  release_lid
+
+  if ((expired)); then
+    # Never touch our own transient units from inside the unit they run in;
+    # the next arm_timer clears whatever the elapsed timer left behind.
+    publish_state
+    command -v notify-send >/dev/null &&
+      notify-send -a Caffeine -u low "Caffeine expired" "Screensaver and lock are back on."
+  else
+    clear_timer
+    publish_state
+    report
+  fi
+}
+
+cmd_toggle() {
+  if awake; then
+    cmd_off
+  else
+    cmd_on "$@"
+  fi
+}
+
+# Scrolling the widget lands here. Positive on an indefinite session is a
+# no-op (nothing to extend); negative closes it down to a finite window, which
+# is the only reading of "less awake" that makes sense.
+cmd_extend() {
+  local input=${1:-} sign=1 seconds left target
+
+  [[ -z $input ]] && usage
+  case $input in
+    +*) input=${input#+} ;;
+    -*)
+      sign=-1
+      input=${input#-}
+      ;;
+  esac
+
+  seconds=$(parse_duration "$input") || {
+    echo "caffeine: unrecognised duration: $input" >&2
+    exit 1
+  }
+
+  awake || {
+    report
+    return 0
+  }
+
+  if left=$(remaining); then
+    target=$((left + sign * seconds))
+  elif ((sign < 0)); then
+    target=$seconds
+  else
+    report
+    return 0
+  fi
+
+  if ((target < MIN_SECONDS)); then
+    cmd_off
+    return 0
+  fi
+
+  arm_timer "$target"
+  publish_state
+  report
+}
+
+command=${1:-status}
+shift 2>/dev/null
+
+case $command in
+  on) cmd_on "$@" ;;
+  off) cmd_off "$@" ;;
+  toggle) cmd_toggle "$@" ;;
+  extend)
+    [[ ${1:-} == "" ]] && usage
+    cmd_extend "$1"
+    ;;
+  step)
+    # Widget scroll: one STEP_SECONDS notch in either direction.
+    case ${1:-up} in
+      up) cmd_extend "+${STEP_SECONDS}s" ;;
+      down) cmd_extend "-${STEP_SECONDS}s" ;;
+      *) usage ;;
+    esac
+    ;;
+  menu)
+    # Right-click on the bar widget. The preset list lives in the Omarchy menu
+    # so it is also reachable by keyboard and searchable from the root menu.
+    exec omarchy menu summon caffeine
+    ;;
+  status)
+    [[ ${1:-} == --json || ${1:-} == -j ]] && JSON_OUTPUT=1
+    report
+    ;;
+  help | --help | -h) usage 0 ;;
+  *) usage ;;
+esac
