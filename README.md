@@ -210,16 +210,43 @@ directory, so global changes need `mise use -g`.
 `dot_omp/private_agent/private_config.yml` → `~/.omp/agent/config.yml`, the
 settings file for the `oh-my-pi` CLI that the `github:can1357/oh-my-pi` mise
 entry installs. It holds only the keys that differ from the defaults: the
-`unicode` symbol preset with the `pi` composer shape, the `dark-tokyo-night`
+`nerd` symbol preset with the `pi` composer shape, the `dark-tokyo-night`
 theme, `anthropic/claude-opus-5:medium` as the default model role, thinking
-blocks hidden, and the startup update check off. `setupVersion` is written by
-the tool's own first-run setup and marks it as already done.
+blocks hidden, the startup update check off, and the custom status line below.
+`setupVersion` is written by the tool's own first-run setup and marks it as
+already done.
 
-Both the directory and the file are `private_`, i.e. 0700/0600. Nothing secret
-is in this file, but the rest of `~/.omp/` — sessions, auth state — is not
-managed here and does not belong in a public repo, so the tighter mode is the
-safer default for a tree chezmoi creates. Anything else the tool writes under
-`~/.omp/` stays untracked.
+`statusLine.preset: custom` replaces the stock bar with an explicit segment
+list — `pi model mode collab path git pr context_pct quota` on the left,
+`session_name` on the right, `powerline-thin` separators. The segment options
+are the non-defaults only: thinking level beside the model, the path
+abbreviated to 40 columns, and branch plus staged/unstaged/untracked in git.
+The `nerd` symbol preset is load-bearing here — the powerline separators and
+the segment icons are Nerd Font glyphs, and every terminal config in this repo
+sets JetBrainsMono Nerd Font.
+
+`dot_omp/private_agent/extensions/statusline.ts` → `~/.omp/agent/extensions/`,
+auto-discovered from the agent directory (no `extensions:` key needed), is what
+supplies the two segments the stock bar has no equivalent for:
+
+- `quota` is new: the active provider's 5h and 7d subscription windows with
+  their reset wall-clocks, polled every two minutes off `fetchUsageReports`.
+  The built-in `usage` segment covers the same ground but renders nothing until
+  its report lands and never shows a reset time. Because the bar only repaints
+  on activity, a refresh that completes while the session is idle asks for one
+  by deleting an unset hook-status key.
+- `context_pct` overwrites the built-in under the same id — keeping the id is
+  what makes the status line compute context usage at all, since it skips that
+  work unless a configured segment is `context_pct` or `context_total`. It
+  prints tokens used with the percentage beside it, instead of the percentage
+  alone.
+
+`private_agent` and `private_config.yml` are `private_`, i.e. 0700/0600. The
+extension is plain 0644 — it is code, not state. Nothing secret is in either
+file, but the rest of `~/.omp/` — sessions, auth state — is not managed here
+and does not belong in a public repo, so the tighter mode is the safer default
+for a tree chezmoi creates. Anything else the tool writes under `~/.omp/` stays
+untracked.
 
 ## Neovim keymaps
 
