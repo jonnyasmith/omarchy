@@ -1,0 +1,57 @@
+# ~/.ssh/config — `chezmoi edit ~/.ssh/config`.
+#
+# One key per host, with IdentitiesOnly. Without it ssh offers every key the
+# agent holds and the first one the server accepts wins — which silently
+# authenticated work repos as the personal account. Past six keys it stops
+# being a correctness problem and becomes a hard failure: ssh exhausts the
+# server's MaxAuthTries and gives up with "Too many authentication failures".
+#
+# Every block is `Match originalhost`, not `Host`. The github-work alias sets
+# HostName github.com, so a `Host github.com` block matches it too — both
+# identities load and agent order picks the account, which is the same bug
+# IdentitiesOnly was meant to close.
+#
+# The .pub stubs name which agent key to use; the private halves never leave
+# 1Password. chezmoi writes them as real files, so they exist from the first
+# apply and only chezmoi can remove them. ssh treats a missing IdentityFile as
+# fatal for the host, so a vanished stub breaks every remote at once.
+# Regenerate them with `~/.ssh/1password/refresh`.
+
+Match originalhost github.com
+  HostName github.com
+  User git
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/1password/github-personal.pub
+
+# Reachable but inert until git rewrites work remotes to this alias; the
+# previous dotfiles did that from a generated ~/.config/git/config.local, which
+# is not ported. Kept so the key stays pinned if that routing comes back.
+Match originalhost github-work
+  HostName github.com
+  User git
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/1password/github-work.pub
+
+# Only the RSA key is registered with Azure DevOps.
+Match originalhost ssh.dev.azure.com,vs-ssh.visualstudio.com
+  User git
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/1password/azure-work.pub
+  PubkeyAcceptedAlgorithms +ssh-rsa
+  HostkeyAlgorithms +ssh-rsa
+
+Host *
+  # 1Password's Linux agent socket. Nothing listens here until the SSH agent is
+  # enabled in 1Password → Settings → Developer; a stale path and an unset one
+  # fail identically, so this is written unconditionally.
+  IdentityAgent ~/.1password/agent.sock
+
+Host pi-development.local
+  HostName pi-development.local
+  User jonny
+  ForwardAgent yes
+
+Host homepi.local
+  HostName homepi.local
+  User jonny
+  ForwardAgent yes

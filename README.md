@@ -197,3 +197,128 @@ Every edit fails open by construction: the gate is
 `[success=1 default=ignore]` and `pam_fprintd` is `sufficient`, so a missing
 reader or a dead driver costs a password prompt, never access. Verify with
 `sudo -k; sudo id -u`, which should print `0` after a touch.
+
+## SSH and the 1Password agent
+
+Ported from the previous multi-OS dotfiles, minus its macOS/Windows/WSL
+branches — this repo has no template data, so every file here is plain.
+
+| Target | Purpose |
+|---|---|
+| `~/.ssh/config` | one identity per host, `IdentitiesOnly yes` |
+| `~/.ssh/1password/*.pub` | public-key stubs naming which agent key a host uses |
+| `~/.ssh/1password/refresh` | regenerates those stubs from `ssh-add -L` |
+| `~/.config/1Password/ssh/agent.toml` | which vault items the agent offers, in order |
+
+No private key is ever on disk. The stubs only tell ssh *which* agent key to
+use; 1Password holds the private halves and serves them over
+`~/.1password/agent.sock`, which `Host *` pins as `IdentityAgent`.
+
+Two details are load-bearing:
+
+- Every host block is `Match originalhost`, not `Host`. The `github-work` alias
+  sets `HostName github.com`, so a `Host github.com` block would match it too —
+  both identities load, agent order picks the account, and work repos silently
+  authenticate as the personal one. That is exactly what `IdentitiesOnly` is
+  there to prevent.
+- The stubs are `private_*.pub` in the source, so chezmoi writes them 0600.
+  OpenSSH 10.5 rejects a 0644 `IdentityFile` outright ("Permissions 0644 … are
+  too open") even when the file holds nothing but a public key.
+
+The agent has to be turned on by hand — 1Password → Settings → Developer → *Use
+the SSH agent*. There is no headless path:
+`~/.config/1Password/settings/settings.json` is HMAC-authenticated
+(`authTags`), so the app ignores an edit made from outside. Before it is on,
+`ssh -T git@github.com` gets as far as offering the right key and then fails
+with `ssh_get_authentication_socket: No such file or directory`. After, it
+greets you as `jonnyasmith`, and `git@github-work` as the work account.
+
+Enabling it also makes 1Password **append its own block to `~/.ssh/config`**:
+
+```
+Host *
+	IdentityAgent ~/.1password/agent.sock
+```
+
+Which is what the tracked config already says, so it is a duplicate rather than
+a conflict — `ssh_config` is first-value-wins and the tracked `Host *` comes
+first. It still shows up as `MM .ssh/config`; take the tracked file back with
+`chezmoi apply --force ~/.ssh/config`. Expect this again after a 1Password
+reinstall or a toggle off/on.
+
+`~/.ssh/1password/refresh` regenerates the stubs from `ssh-add -L` **into this
+source directory**, not straight into `~` — a rotated key is a change to the
+desired state, so it belongs in a commit. Review with `chezmoi diff`, then
+apply. It resolves one source path per file rather than joining a directory: on
+`~/.ssh/1password` alone, `chezmoi source-path` returns the directory without
+the per-file `private_` prefix, and writing `$dir/$name.pub` creates a second
+0644 source entry per stub, which chezmoi then reports as `inconsistent state`.
+
+### Which key a repo gets
+
+ssh sees a hostname, never a repo, so the host in the remote URL is what selects
+the key. Git rewrites that host for work orgs and switches the commit email off
+the same URL. Below, `ORG` is a work GitHub org named at `chezmoi init` — the
+repo itself holds no org name and no work address:
+
+| Remote as cloned | Pushes to | Key | Commit email |
+|---|---|---|---|
+| `git@github.com:ORG/x.git` | `git@github-work:ORG/x.git` | work | work |
+| `ssh://git@github.com/ORG/x.git` | `git@github-work:ORG/x.git` | work | work |
+| `git@github-work:ORG/x.git` | unchanged | work | work |
+| `git@ssh.dev.azure.com:v3/…` | unchanged | `azure-work` (RSA) | work |
+| anything else on `github.com` | unchanged | personal | `jonny.asmith@gmail.com` |
+
+So a work repo clones with its ordinary GitHub URL and still authenticates as
+the work account. Two pieces do it, both generated into
+`~/.config/git/config.local` and keyed off the org prefix:
+
+- `[url "git@github-work:ORG/"]` with two `insteadOf` values — scp-style and
+  `ssh://`. This is what makes ssh reach for the work key.
+- `[includeIf "hasconfig:remote.*.url:…"] path = config.work`, which sets only
+  the email. Three URL forms are listed because `hasconfig` matches the URL **as
+  stored**, before the rewrite, and a repo may also have been cloned straight
+  from the alias. The trailing `/` before `**` is required — `**` is only
+  wildcard-magic directly after a slash, so `ORG**` matches nothing while
+  failing silently.
+
+A second org needs nothing in `~/.ssh` — one alias serves every org on the same
+account. Add it to `workOrgs` and re-run `chezmoi init`; `config.local.tmpl`
+ranges over the list.
+
+For what a URL cannot express — a personal fork of a work repo, a client repo
+outside the org — `git work` and `git personal` set `user.email` in the current
+repo only, and `git whoami` prints the effective one. `git work` comes from
+`config.local`, so it exists only on a work machine.
+
+### Keeping the employer name out of the repo
+
+This repo is public and work scans public repos for the company name, so no
+file here contains it. `.chezmoi.toml.tmpl` asks three questions the first time
+`chezmoi init` runs and writes the answers to `~/.config/chezmoi/chezmoi.toml`,
+outside the repo:
+
+| Prompt | Data key |
+|---|---|
+| Work machine (adds a second git identity) | `work` |
+| Work GitHub org(s), comma-separated | `workOrgs` |
+| Work git email | `workEmail` |
+
+`promptBoolOnce`/`promptStringOnce` only ask when the key is absent, so a later
+`chezmoi init` is silent. To change an answer, edit
+`~/.config/chezmoi/chezmoi.toml` and re-run `chezmoi init` — that file is
+rendered by `init` alone, never by `apply`. It restates `sourceDir`, because the
+template owns the whole file and `init` would otherwise drop it and start
+looking in `~/.local/share/chezmoi`.
+
+Only two targets consume the answers, and both are generated:
+`dot_config/git/config.local.tmpl` (the rewrites) and
+`dot_config/git/config.work.tmpl` (the email). Answer `false` to the work prompt
+and both render to zero bytes; chezmoi deletes an empty target, so
+`~/.config/git/config` is left with two `[include]`s pointing at files that do
+not exist, which git ignores silently. Nothing else in the repo is a template
+for this reason — keep it that way, and put anything employer-shaped behind
+these keys.
+
+`.chezmoidata` cannot do this job: chezmoi reads those files verbatim rather
+than as templates, and they would be tracked here anyway.

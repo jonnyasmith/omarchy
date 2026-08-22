@@ -82,6 +82,10 @@ See `README.md` for the per-item detail. Summary:
 - `.chezmoi.toml.tmpl` — the only prompts in the repo: `work`, `workOrgs`,
   `workEmail`, answered once at `chezmoi init` and stored in
   `~/.config/chezmoi/chezmoi.toml`. See rule 7.
+- `private_dot_ssh/` + `dot_config/private_1Password/ssh/agent.toml` — ssh
+  config with one 1Password-agent identity per host, the `private_*.pub` stubs
+  it pins (0600 is load-bearing under OpenSSH 10), and the agent's own item
+  list. No private key touches disk; the agent toggle is GUI-only.
 - `.chezmoitemplates/omarchy/fingerprint.md` + its `run_after_` script — the
   canonical fingerprint topic guide, reinstalled into the package-owned agent
   skill tree after every `omarchy update` wipes it.
