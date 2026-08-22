@@ -27,7 +27,8 @@ guide_ok=false
 cmp -s "$staged" "$guide" && guide_ok=true
 
 link_ok=false
-grep -qxF "$link" "$index" && link_ok=true
+# `--` matters: the link starts with "- [", which grep would parse as options.
+grep -qxF -- "$link" "$index" && link_ok=true
 
 if $guide_ok && $link_ok; then
   exit 0
