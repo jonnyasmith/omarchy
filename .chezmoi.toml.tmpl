@@ -28,6 +28,15 @@
 # looking in ~/.local/share/chezmoi.
 sourceDir = "~/dev/dotfiles"
 
+# Both run_after_ scripts are unconditional by design, so `chezmoi status`
+# lists them as `R` on every invocation and `chezmoi diff` prints their entire
+# bodies. Neither is drift, and the noise buries real changes. Scripts still
+# run on apply; review their content in git.
+[status]
+    exclude = ["scripts"]
+[diff]
+    exclude = ["scripts"]
+
 [data]
     work = {{ $work }}
     # Comma-separated GitHub org slugs, exactly as they appear in clone URLs.

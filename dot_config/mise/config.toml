@@ -1,3 +1,6 @@
+[settings]
+minimum_release_age = "7d"
+
 [tools]
 claude = "latest"
 codex = "latest"

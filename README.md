@@ -12,10 +12,19 @@ chezmoi cd             # Subshell in this repo
 chezmoi doctor         # Sanity-check the install
 ```
 
-`chezmoi status` always lists `R omarchy-fingerprint-skill.sh`. `R` means "this
-script runs on the next apply", which is by design (see below) — it is not
-drift. Judge state by `chezmoi apply` output, which is silent when there is
-nothing to do.
+Both `run_after_` scripts are unconditional by design, so `chezmoi status` used
+to list `R omarchy-fingerprint-pam.sh` and `R omarchy-fingerprint-skill.sh` on
+every run and `chezmoi diff` printed their whole bodies. `R` means "this script
+runs on the next apply", not drift, and the two permanent lines buried real
+changes. `.chezmoi.toml.tmpl` now sets `status.exclude` and `diff.exclude` to
+`["scripts"]`, so both commands report files only; the scripts still run on
+every apply. Pass `-x none` to see them again.
+
+Because this repo *is* the source directory, a file dropped in its root is read
+as a source entry and applied to `~`. `.chezmoiignore` lists the ones that are
+repo-local — `AGENTS.md`, `README.md`, and `mise.toml`, the project-local mise
+config for working *on* this repo (not to be confused with
+`dot_config/mise/config.toml`, the global tool set it manages).
 
 ## New Machine
 

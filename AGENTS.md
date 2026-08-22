@@ -61,9 +61,17 @@ so overrides are additive and only need the keys they change.
 
 ## Reading `chezmoi status`
 
-`R omarchy-fingerprint-pam.sh` and `R omarchy-fingerprint-skill.sh` are always
-listed. `R` means "runs on next apply" — by design, not drift. Judge state by
-`chezmoi apply`, which is silent when there is nothing to do.
+`status.exclude`/`diff.exclude` are `["scripts"]` in `~/.config/chezmoi/chezmoi.toml`,
+so `chezmoi status` and `chezmoi diff` report files only. Without that, the two
+unconditional `run_after_` scripts show as a permanent `R` (= "runs on next
+apply", by design, not drift) and `diff` dumps their full bodies. `-x none`
+restores them. Judge state by `chezmoi apply`, which is silent when there is
+nothing to do.
+
+First status column = actual vs. last state chezmoi wrote (drift on disk, fix
+with `re-add`); second = actual vs. target (what `apply` will do). A file added
+to this repo's root without a `.chezmoiignore` entry shows as ` A` — chezmoi is
+about to create it in `~`.
 
 ## What is currently managed
 

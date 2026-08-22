@@ -1,2 +1,6 @@
+# Repo-local files that live in the source directory but are not dotfiles.
+# This repo *is* the chezmoi source dir, so anything dropped in its root is
+# otherwise read as a source entry and applied to ~.
 AGENTS.md
 README.md
+mise.toml
