@@ -113,6 +113,28 @@ The one-letter git aliases these call (`git a`, `git s`, `git l`, `git d`, …)
 came over into `dot_config/git/config` in the same pass. Neither half is much
 use alone.
 
+## Herdr
+
+`dot_config/herdr/config.toml` configures [herdr](https://herdr.dev), the
+terminal workspace manager Omarchy ships as `h`. The file is a deliberate port
+of Omarchy's own tmux config (`config/tmux/tmux.conf`) — workspace/tab/pane map
+onto tmux's session/window/pane, the theme rides the terminal palette, and the
+`[ui]` block turns off the chrome tmux never drew (pane gaps, outer borders,
+scrollbars, close confirmations).
+
+The leader is `ctrl+a`, not herdr's default `ctrl+space`. Consequence: `ctrl+a`
+no longer reaches readline (`beginning-of-line`) or a nested tmux inside a
+herdr pane.
+
+Only `~/.config/herdr/config.toml` is managed. The sibling files herdr writes
+there — `session.json`, `.plugins.lock`, `release-notes.json`, the two logs —
+are runtime state and stay out of the repo.
+
+```bash
+herdr config check          # validate the file
+herdr server reload-config  # apply it to the running server, no restart
+```
+
 ## Starship prompt
 
 `dot_config/starship.toml` is the prompt Omarchy's bash rc initialises. `format`
