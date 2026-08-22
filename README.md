@@ -210,11 +210,11 @@ directory, so global changes need `mise use -g`.
 `dot_omp/private_agent/private_config.yml` → `~/.omp/agent/config.yml`, the
 settings file for the `oh-my-pi` CLI that the `github:can1357/oh-my-pi` mise
 entry installs. It holds only the keys that differ from the defaults: the
-`nerd` symbol preset with the `pi` composer shape, the `dark-tokyo-night`
-theme, `anthropic/claude-opus-5:medium` as the default model role, thinking
-blocks hidden, the startup update check off, and the custom status line below.
-`setupVersion` is written by the tool's own first-run setup and marks it as
-already done.
+`nerd` symbol preset with the `pi` composer shape, both theme slots pinned to
+the Omarchy-derived theme below, `anthropic/claude-opus-5:medium` as the default
+model role, thinking blocks hidden, the startup update check off, and the custom
+status line below. `setupVersion` is written by the tool's own first-run setup
+and marks it as already done.
 
 `statusLine.preset: custom` replaces the stock bar with an explicit segment
 list — `pi model mode collab path git pr context_pct quota` on the left,
@@ -247,6 +247,51 @@ file, but the rest of `~/.omp/` — sessions, auth state — is not managed here
 and does not belong in a public repo, so the tighter mode is the safer default
 for a tree chezmoi creates. Anything else the tool writes under `~/.omp/` stays
 untracked.
+
+### Omarchy theme
+
+Omarchy themes every TUI it ships from one `colors.toml` per theme:
+`omarchy theme set` renders every `*.tpl` in `/usr/share/omarchy/default/themed/`
+into `~/.local/state/omarchy/current/theme/`, then per-app setters and the
+`theme-set` hooks push each rendered file where its app looks. Three files hook
+omp into that pipeline:
+
+- `dot_config/omarchy/themed/omp.json.tpl` — the omp theme, named
+  `omarchy-system`, with every colour derived from `colors.toml` placeholders
+  and `{{ mix a b n% }}`. User templates in `~/.config/omarchy/themed/` are
+  processed before the packaged ones and win, so this is an override-safe
+  location.
+- `dot_config/omarchy/hooks/theme-set.d/executable_omp-theme.hook` — copies the
+  rendered `omp.json` to `~/.omp/agent/themes/omarchy-system.json` on every
+  theme switch. `omarchy-hook` runs hooks through `bash`, so the exec bit is
+  decoration, but the stock hooks beside it are 755.
+- `run_onchange_after_omarchy-omp-theme.sh.tmpl` — the template only renders
+  inside a theme apply, so a fresh machine and an edited template both need one
+  `omarchy-theme-refresh`. Keyed on the hashes of the two files above.
+
+Omarchy already ships `pi.json.tpl` and `omarchy-theme-set-pi`, but they target
+upstream `pi`: `~/.pi/agent/themes/` plus a `settings.json` theme key. omp is
+the `can1357` fork — different agent dir, `config.yml`, and a schema with 15
+colour tokens upstream lacks (`pythonMode`, `statusLineBg`, and the 13
+`statusLine*` segment colours). Feeding omp the stock `pi.json` fails
+validation on exactly those keys and silently falls back to the built-in `dark`
+theme, so this template is a superset rather than a symlink.
+
+Two details are load-bearing:
+
+- The hook `cp`s over the target instead of `mktemp` + `mv`. omp watches
+  `~/.omp/agent/themes/<current-theme>.json` and debounce-reloads it, so writing
+  through the same inode re-colours **running** sessions on a theme switch; a
+  rename would swap the inode out from under the watcher.
+- `theme.dark` and `theme.light` both name `omarchy-system`. Nothing at runtime
+  edits `config.yml` — omp owns that file and rewrites it itself, so a hook
+  editing it would race the tool — and pinning both slots means omp's auto
+  dark/light detection cannot pick the wrong theme when a light Omarchy theme is
+  applied. Every colour is a `mix` toward `foreground`, so the template works in
+  both modes.
+
+A theme with no `colors.toml` renders nothing; the hook then leaves the previous
+file in place and omp keeps the theme it has loaded.
 
 ## Neovim keymaps
 

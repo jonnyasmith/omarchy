@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Push the rendered Omarchy theme into Oh My Pi. Stock `omarchy-theme-set-pi`
+# does this for upstream pi (`~/.pi/agent`, `settings.json`); omp is a fork with
+# a different agent dir and 15 extra colour tokens, so it needs its own file
+# rendered from `~/.config/omarchy/themed/omp.json.tpl`.
+
+set -euo pipefail
+
+source="$HOME/.local/state/omarchy/current/theme/omp.json"
+agent_dir="$HOME/.omp/agent"
+target="$agent_dir/themes/omarchy-system.json"
+
+# No render (theme without a colors.toml) or no omp: leave the last good file.
+# omp keeps its loaded theme when the file is missing or fails to parse.
+[[ -f $source && -d $agent_dir ]] || exit 0
+
+mkdir -p "$(dirname "$target")"
+
+# Copy in place rather than mktemp+mv: omp watches this exact path and a rename
+# would swap the inode out from under the watcher, costing live reload.
+cp "$source" "$target"

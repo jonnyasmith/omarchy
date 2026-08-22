@@ -92,6 +92,13 @@ See `README.md` for the per-item detail. Summary:
   work-account routing: `insteadOf` rewrites a work org's `github.com` remotes
   onto the `github-work` ssh alias, and `includeIf hasconfig` swaps in the work
   email. Renaming that alias means editing `~/.ssh/config` too.
+- `dot_omp/private_agent/` + `dot_config/omarchy/themed/omp.json.tpl` +
+  `dot_config/omarchy/hooks/theme-set.d/` + its `run_onchange_after_` script —
+  the Oh My Pi agent config, the custom status line and its `quota`/`context_pct`
+  extension, and the Omarchy theme bridge: the template renders `colors.toml`
+  into an omp theme on every `omarchy theme set` and the hook copies it into
+  `~/.omp/agent/themes/`, which live-reloads running sessions. Never let
+  anything but omp write `config.yml`.
 - `.chezmoi.toml.tmpl` — the only prompts in the repo: `work`, `workOrgs`,
   `workEmail`, answered once at `chezmoi init` and stored in
   `~/.config/chezmoi/chezmoi.toml`. See rule 7.

@@ -2,7 +2,8 @@ symbolPreset: nerd
 composer: 
   shape: pi
 theme: 
-  dark: dark-tokyo-night
+  dark: omarchy-system
+  light: omarchy-system
 setupVersion: 2
 defaultThinkingLevel: medium
 modelRoles: 
