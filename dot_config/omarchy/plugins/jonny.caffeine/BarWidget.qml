@@ -31,6 +31,12 @@ BarWidget {
   readonly property string coffeeGlyph: String.fromCodePoint(0xF0176)
   readonly property string lidGlyph: String.fromCodePoint(0xF04B3)
 
+  // The shared WidgetButton paints `active` in the theme's urgent role, which
+  // is a red — wrong signal for a keep-awake toggle that is working as asked.
+  // Coffee brown instead, at roughly the same lightness so it still reads on
+  // any bar background.
+  readonly property color awakeColor: "#a1673f"
+
   readonly property string glyph: holdingLid ? lidGlyph : coffeeGlyph
   readonly property string label: remaining >= 0 ? glyph + " " + formatRemaining(remaining) : glyph
 
@@ -105,6 +111,7 @@ BarWidget {
     bar: root.bar
     text: root.label
     active: root.awake
+    activeColor: root.awakeColor
     dimmed: !root.awake
     tooltipText: root.tooltip
 
