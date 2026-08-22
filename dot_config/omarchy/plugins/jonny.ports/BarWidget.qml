@@ -57,8 +57,11 @@ BarWidget {
 
   function openPort(port) {
     if (!bar) return
-    var url = urlFor(port)
-    bar.run("omarchy-launch-or-focus-webapp " + bar.shellQuote("localhost:" + port) + " " + bar.shellQuote(url))
+    // shellQuote lives on the Commons Util singleton, not on the bar — the bar
+    // README lists it under `bar.` but no such method exists, and calling it
+    // there throws out of the click handler without a trace.
+    bar.run("omarchy-launch-or-focus-webapp "
+      + Util.shellQuote("localhost:" + port) + " " + Util.shellQuote(urlFor(port)))
   }
 
   function publish(text) {

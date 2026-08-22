@@ -459,7 +459,7 @@ and only when `/run/docker.pid` already exists: `docker.service` here is
 socket-activated and disabled, and waking it to draw a bar widget would defeat
 the point of that.
 
-Three details that are easy to get wrong:
+Four details that are easy to get wrong:
 
 - **One port, two sockets.** IPv4 and IPv6 binds are separate `ss` rows. The
   first labelled row for a port wins and the rest are dropped, or portainer
@@ -468,6 +468,11 @@ Three details that are easy to get wrong:
   a URL built from the observed address as `127.0.0.1:5173` is a dead link.
 - **A socket has no scheme.** `ss` cannot tell you that a port wants https, so
   ports that do are listed in `httpsPorts` on the `shell.json` entry.
+- **`shellQuote` is not on the bar.** Omarchy's bar README lists
+  `bar.shellQuote(value)` beside `bar.run(command)`, but only `run` exists;
+  quoting lives on the `qs.Commons` `Util` singleton, as `Util.shellQuote`.
+  Calling the documented one throws out of the click handler with nothing in
+  the journal, so the row just looks dead.
 
 Settings, all optional, inline on the `bar.layout` entry:
 
