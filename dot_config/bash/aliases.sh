@@ -16,6 +16,8 @@ alias reload='exec bash'
 # and `$(cat file)` are unchanged; `command cat` bypasses.
 command -v bat >/dev/null 2>&1 && alias cat="bat --paging=never"
 
+alias vim='nvim'
+
 # --- git --------------------------------------------------------------------
 # These lean on the one-letter git aliases in ~/.config/git/config (a, cm, d,
 # f, l, m, p, r, s). Both halves came over together; neither works alone.
