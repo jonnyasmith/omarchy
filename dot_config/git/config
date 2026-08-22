@@ -1,0 +1,57 @@
+# See https://git-scm.com/docs/git-config
+
+[alias]
+	# Ported from the previous zsh-era dotfiles. The one-letter names are the
+	# ones ~/.config/bash/aliases.sh calls: ga -> `git a .`, gs -> `git s`, etc.
+	a    = add -A
+	b    = branch
+	br   = branch
+	c    = commit
+	ca   = commit --amend
+	caa  = commit --amend -a
+	caan = commit --amend -a --no-edit
+	cam  = commit -a -m
+	ci   = commit
+	cm   = commit -m
+	co   = checkout
+	cob  = checkout -b
+	cp   = cherry-pick -x
+	d    = diff --ignore-space-at-eol -b -w --ignore-blank-lines
+	f    = fetch
+	i    = init
+	m    = merge
+	mt   = mergetool
+	p    = pull
+	r    = rebase
+	rl   = reflog
+	s    = status -s -b
+	sb   = show-branch
+	st   = status
+	t    = tag
+	l    = log --pretty=format:'%C(bold blue)%h%C(reset) %C(reset)%s%C(reset) %C(bold red)%an%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)' --abbrev-commit --date=relative
+	ll   = l -10
+	lg   = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) %C(reset)%s%C(reset) %C(bold red)%an%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)'
+[init]
+	defaultBranch = master
+[pull]
+	rebase = true 			 # Rebase (instead of merge) on pull
+[push]
+	autoSetupRemote = true   # Automatically set upstream branch on push
+[diff]
+	algorithm = histogram    # Clearer diffs on moved/edited lines
+	colorMoved = plain       # Highlight moved blocks in diffs
+	mnemonicPrefix = true    # More intuitive refs in diff output
+[commit]
+	verbose = true           # Include diff comment in commit message template
+[column]
+	ui = auto 			     # Output in columns when possible
+[branch]
+	sort = -committerdate    # Sort branches by most recent commit first
+[tag]
+	sort = -version:refname  # Sort version numbers as you would expect
+[rerere]
+	enabled = true           # Record and reuse conflict resolutions
+	autoupdate = true        # Apply stored conflict resolutions automatically
+[user]
+	name = Jonny Smith
+	email = jonny.asmith@gmail.com

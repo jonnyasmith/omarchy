@@ -29,6 +29,79 @@ chezmoi init --source ~/dev/dotfiles --apply <git-remote-url>
 No remote is configured yet; add one with
 `git remote add origin <url> && git push -u origin master`.
 
+## Bash line editor
+
+`dot_bashrc` loads [ble.sh](https://github.com/akinomyoga/ble.sh) — the bash
+replacement for zsh's `zsh-autosuggestions` + `fast-syntax-highlighting`. It
+brings inline history suggestions in grey, command-line syntax highlighting,
+and a completion menu.
+
+It is not in the official repos and is not installed by anything here:
+
+```bash
+yay -S blesh-git    # 0.4.0-devel; the 0.3.4 stable release predates bash 5.3
+ble-update          # later, to refresh it
+```
+
+Every reference to it is guarded, so a machine without the package gets plain
+Omarchy bash rather than a broken shell.
+
+Load order in `dot_bashrc` is load-bearing:
+
+1. `source /usr/share/blesh/ble.sh --noattach` — **before** Omarchy's rc,
+   because starship and mise install `PROMPT_COMMAND` hooks that ble.sh has to
+   see being registered.
+2. `source "$OMARCHY_PATH/default/bash/rc"`.
+3. `~/.config/bash/*.sh` — personal aliases, sourced after Omarchy's so they
+   win.
+4. `ble-attach` — last, once every hook exists.
+
+`dot_config/blesh/init.sh` is ble.sh's own config (it looks for
+`$XDG_CONFIG_HOME/blesh/init.sh` itself; nothing sources it). It holds only
+departures from ble.sh's defaults: grey ghost text instead of a highlighted
+block, red-on-default instead of red-background for an unknown command,
+`Ctrl+Space` to accept a suggestion, `Esc` to dismiss it, `Shift+Enter` for a
+literal newline, and `complete_auto_complete_opts=syntax-disabled`.
+
+That last one restricts inline suggestions to shell history, matching zsh.
+ble.sh's extra `syntax` source guesses filenames *inside option clusters* —
+with it on, typing `echo -lR` next to a `README.md` ghosts `EADME.md` and
+Right-arrow inserts `echo -lREADME.md`. TAB completion is unaffected.
+
+`dot_config/bash/ble-integrations.sh` re-imports fzf and zoxide through
+ble.sh's patched `contrib/integration/*` versions. Omarchy's rc sources fzf's
+stock `completion.bash`, which registers `complete -F _fzf_path_completion` for
+a long list of commands and assumes readline is driving; ble.sh calls those
+compspecs while building suggestions. The `fzf-menu` import additionally routes
+the TAB completion menu through fzf, which is the `fzf-tab` equivalent. All are
+`ble-import -d`, i.e. loaded in idle time after the first prompt.
+
+## Bash aliases
+
+`dot_config/bash/aliases.sh` is the port of the previous zsh setup's
+`~/.config/zsh/aliases.zsh` and `os.zsh.tmpl` — git shortcuts, docker, `ls`
+variants, deep `cd ..` chains, `gac`, `fa`. The template's macOS and
+apt/dnf/nala branches are gone; this machine is Arch only.
+
+Three of them deliberately shadow Omarchy defaults, since the file is sourced
+after Omarchy's rc:
+
+| Alias | Omarchy | Here |
+|---|---|---|
+| `h` | `herdr` | `history` — run `herdr` by name |
+| `gcm` | `git commit -m` | `git cm`, same thing via the git alias |
+| `ls` | `eza -lh …` | `lsd`, but only if `lsd` is installed; it is not, so eza stays |
+
+Two were not ported as-is. `ip` was `dig +short myip.opendns.com` on macOS;
+shadowing iproute2's `ip` on Linux breaks every network command, so the lookup
+is `myip` and `ips` is `ip -brief address`. `gac` is a function rather than an
+alias because bash has no `noglob`, and `gac fix the *.ts import` would glob
+before the alias saw it.
+
+The one-letter git aliases these call (`git a`, `git s`, `git l`, `git d`, …)
+came over into `dot_config/git/config` in the same pass. Neither half is much
+use alone.
+
 ## Hyprland input
 
 `dot_config/hypr/input.lua` is the user-side Hyprland input override, loaded

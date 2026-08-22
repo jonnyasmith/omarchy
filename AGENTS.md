@@ -61,6 +61,12 @@ listed. `R` means "runs on next apply" — by design, not drift. Judge state by
 See `README.md` for the per-item detail. Summary:
 
 - `dot_config/hypr/input.lua` — Hyprland input overrides (Caps Lock ⇄ Escape).
+- `dot_bashrc` + `dot_config/blesh/init.sh` + `dot_config/bash/` — ble.sh (the
+  zsh-autosuggestions equivalent), its settings, its fzf/zoxide integrations,
+  and the aliases ported from the old zsh setup. Requires `yay -S blesh-git`;
+  every reference is guarded.
+- `dot_config/git/config` — git config, including the one-letter aliases the
+  bash `g*` aliases call.
 - `.chezmoitemplates/omarchy/fingerprint.md` + its `run_after_` script — the
   canonical fingerprint topic guide, reinstalled into the package-owned agent
   skill tree after every `omarchy update` wipes it.
