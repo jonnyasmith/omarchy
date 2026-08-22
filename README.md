@@ -104,14 +104,35 @@ use alone.
 
 ## Starship prompt
 
-`dot_config/starship.toml` is the prompt Omarchy's bash rc initialises.
-`format` is a single explicit string — directory, git branch, git status — so
-every module Starship enables by default (language versions, cloud contexts,
-`$cmd_duration`, …) is excluded by omission rather than disabled one by one.
+`dot_config/starship.toml` is the prompt Omarchy's bash rc initialises. `format`
+is a single explicit string — directory, git branch, git state, git status,
+exit status — so every module Starship enables by default (language versions,
+cloud contexts, `$cmd_duration`, …) is excluded by omission rather than disabled
+one by one. The `$schema` key is inert at runtime; it buys completion and
+validation in any editor with a TOML language server.
 
 `$line_break` before `$character` puts the `❯` on its own line, leaving the
 full terminal width for the command regardless of how long the path and branch
 get. `add_newline = true` is separate: it is the blank line *above* the prompt.
+
+`$git_state` is what makes a rebase visible — without it a detached mid-rebase
+HEAD renders like any other branch. `$status` sits at the end of the top line
+rather than next to `❯`, so the cursor line stays clean; the `✗` character
+already says *that* a command failed, `$status` adds *which* code.
+
+`[directory] read_only` is set to a nerd-font glyph because the default is the
+emoji `🔒` and `repo_root_format` references `$read_only`. Every other module
+overridden here is monochrome cyan; the exceptions are deliberate warnings —
+`read_only` keeps its red default, as does `battery` below its 10% threshold.
+
+`right_format` (sudo, jobs, battery, time) only exists thanks to ble.sh. Bash
+has no RPROMPT, and `starship init bash` emits the right prompt solely inside
+`if [[ ${BLE_ATTACHED-} ]]`, as `bleopt prompt_rps1`. On a machine without the
+ble.sh package it silently disappears. That same init prefixes the value with
+one newline per newline in `PS1`, so with `$line_break` the right prompt lands
+on the `❯` row. `sudo` and `time` need explicit `disabled = false`; both are
+off by default, which is why the equivalent block in the old zsh config never
+rendered anything but `$jobs`.
 
 `command_timeout = 200` caps per-module work; the git modules are the only ones
 that can hit it, on a large repo.

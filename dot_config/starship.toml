@@ -1,6 +1,9 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
 add_newline = true
 command_timeout = 200
-format = "[$directory$git_branch$git_status]($style)$line_break$character"
+format = "[$directory$git_branch$git_state$git_status]($style)$status$line_break$character"
+right_format = "$sudo$jobs$battery$time"
 
 [character]
 error_symbol = "[✗](bold cyan)"
@@ -11,10 +14,14 @@ truncation_length = 2
 truncation_symbol = "…/"
 repo_root_style = "bold cyan"
 repo_root_format = "[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) "
+read_only = " 󰌾"
 
 [git_branch]
 format = "[$branch]($style) "
 style = "italic cyan"
+
+[git_state]
+style = "bold cyan"
 
 [git_status]
 format     = '[$all_status]($style)'
@@ -30,3 +37,24 @@ stashed    = ""
 staged     = ""
 renamed    = ""
 deleted    = ""
+
+[status]
+disabled = false
+format = "[$status]($style) "
+style = "bold cyan"
+
+[sudo]
+disabled = false
+format = "[$symbol]($style)"
+symbol = "sudo "
+style = "cyan"
+
+[jobs]
+format = "[$symbol$number]($style) "
+style = "cyan"
+
+[time]
+disabled = false
+format = "[$time]($style)"
+time_format = "%H:%M"
+style = "cyan"
