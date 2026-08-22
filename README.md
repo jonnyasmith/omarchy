@@ -52,3 +52,29 @@ missing, stale, or unlinked from `SKILL.md`.
 
 Edit the guide in `.chezmoitemplates/omarchy/fingerprint.md`, never in
 `/usr/share/omarchy/`, then run `chezmoi apply`.
+
+## Fingerprint PAM configuration
+
+`run_after_omarchy-fingerprint-pam.sh` restores what
+`omarchy-setup-security-fingerprint` writes into `/etc/pam.d/`:
+
+| File | Contents | Package owner |
+|---|---|---|
+| `sudo` | clamshell gate + `auth sufficient pam_fprintd.so`, prepended | `sudo` (a pacman `backup` file, so upgrades leave it and drop a `.pacnew`) |
+| `polkit-1` | same two lines, or the whole stack if absent | none |
+| `omarchy-lock-fingerprint` | fingerprint-only stack for the lock screen | none |
+
+The gate must stay immediately above `pam_fprintd.so`; the script enforces that
+adjacency rather than assuming it.
+
+It refuses to touch anything unless `pam_fprintd.so`, `pam_exec.so`,
+`omarchy-hw-laptop-closed` and `fprintd-list` are all present **and** a finger
+is actually enrolled — an enrolled print is the only proof the driver drives the
+sensor. Before installing an edited stack it checks the staged file gained
+exactly the expected lines and kept the gate adjacent to `pam_fprintd`, and it
+keeps a timestamped `.bak` of the original.
+
+Every edit fails open by construction: the gate is
+`[success=1 default=ignore]` and `pam_fprintd` is `sufficient`, so a missing
+reader or a dead driver costs a password prompt, never access. Verify with
+`sudo -k; sudo id -u`, which should print `0` after a touch.
