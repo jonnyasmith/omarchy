@@ -1,0 +1,35 @@
+# Machine facts, resolved once at `chezmoi init` and written to
+# ~/.config/chezmoi/chezmoi.toml — outside this repo, which is public.
+#
+# The work identity is asked for rather than tracked. None of it is a
+# credential, but an employer name in a public repo is something work scans for,
+# so it lives on the machine and only reaches the templates that need it
+# (dot_config/git/config.local.tmpl, config.work.tmpl). The things that *are*
+# credentials — the ssh private keys — never reach a template at all; 1Password
+# holds them.
+#
+# This file is NOT re-rendered by `chezmoi apply`. To change an answer, re-run
+# `chezmoi init` or edit ~/.config/chezmoi/chezmoi.toml directly. A
+# .chezmoidata file cannot do this job: chezmoi loads those verbatim, never as
+# templates, and they would be tracked here anyway.
+{{/* Note this first action must NOT trim leftwards: doing so pulls the line
+     below up onto the end of the comment above, where the leading # swallows
+     it. */ -}}
+{{ $work := promptBoolOnce . "work" "Work machine (adds a second git identity)" false -}}
+{{- $workOrgs := "" -}}
+{{- $workEmail := "" -}}
+{{- if $work -}}
+{{-   $workOrgs = promptStringOnce . "workOrgs" "Work GitHub org(s), comma-separated" "" -}}
+{{-   $workEmail = promptStringOnce . "workEmail" "Work git email" "" -}}
+{{- end -}}
+
+# sourceDir is non-default and this template owns the whole config file, so it
+# has to be restated here — otherwise `chezmoi init` drops it and chezmoi goes
+# looking in ~/.local/share/chezmoi.
+sourceDir = "~/dev/dotfiles"
+
+[data]
+    work = {{ $work }}
+    # Comma-separated GitHub org slugs, exactly as they appear in clone URLs.
+    workOrgs = {{ $workOrgs | quote }}
+    workEmail = {{ $workEmail | quote }}

@@ -49,6 +49,15 @@ so overrides are additive and only need the keys they change.
    type a password into), `sudo` only when a human is at an interactive shell.
 6. Prefer an `omarchy` subcommand over hand-editing when one exists
    (`omarchy commands`, `omarchy <group> --help`).
+7. **This repo will be public and work scans public repos for the company
+   name.** No employer name, work email, work GitHub account, or client name
+   may appear in any tracked file, comment, or commit message — not even in an
+   example. They live in `~/.config/chezmoi/chezmoi.toml` as `workOrgs` /
+   `workEmail`, reached only through `dot_config/git/config.local.tmpl` and
+   `config.work.tmpl`. Write `ORG` in docs. Both templates render to zero bytes
+   when `work = false`, and chezmoi deletes an empty target, so a personal
+   machine ends up with `[include]`s pointing at nothing — which git ignores.
+   Before committing: `git grep -i <company>` and check the diff.
 
 ## Reading `chezmoi status`
 
@@ -67,6 +76,9 @@ See `README.md` for the per-item detail. Summary:
   every reference is guarded.
 - `dot_config/git/config` — git config, including the one-letter aliases the
   bash `g*` aliases call.
+- `.chezmoi.toml.tmpl` — the only prompts in the repo: `work`, `workOrgs`,
+  `workEmail`, answered once at `chezmoi init` and stored in
+  `~/.config/chezmoi/chezmoi.toml`. See rule 7.
 - `.chezmoitemplates/omarchy/fingerprint.md` + its `run_after_` script — the
   canonical fingerprint topic guide, reinstalled into the package-owned agent
   skill tree after every `omarchy update` wipes it.
