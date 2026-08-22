@@ -22,9 +22,11 @@ every apply. Pass `-x none` to see them again.
 
 Because this repo *is* the source directory, a file dropped in its root is read
 as a source entry and applied to `~`. `.chezmoiignore` lists the ones that are
-repo-local — `AGENTS.md`, `README.md`, and `mise.toml`, the project-local mise
-config for working *on* this repo (not to be confused with
-`dot_config/mise/config.toml`, the global tool set it manages).
+repo-local: `AGENTS.md`, `README.md`, and `mise.toml`. That last entry is
+pre-emptive — `mise use <tool>` without `-g` writes a project-local `mise.toml`
+into the current directory, and run from here that file becomes a source entry
+targeting `~/mise.toml`. Use `mise use -g` to reach the global set in
+`dot_config/mise/config.toml`.
 
 ## New Machine
 
@@ -156,7 +158,7 @@ whole restore path on a new machine.
 
 | Tool | Pin |
 |---|---|
-| `claude`, `codex`, `gh` | `latest` |
+| `claude`, `codex`, `gh`, `zoxide` | `latest` |
 | `github:can1357/oh-my-pi` | `latest` |
 | `node` | `26.7.0` |
 
@@ -165,10 +167,21 @@ against; the CLIs float, since they are self-contained binaries that are only
 useful current. The `github:` backend installs from release assets rather than a
 registry entry, so it needs the full `owner/repo` as the key.
 
+`[settings] minimum_release_age = "7d"` is the counterweight to all that
+floating: a `latest` resolved the day it ships is a supply-chain window, so mise
+ignores any release younger than a week. It applies to every tool here,
+including the `github:` backend.
+
+`zoxide` is the one entry that duplicates a pacman package — Omarchy installs
+`zoxide 0.10.0-1` and its bash rc initialises it. The mise shim wins on `PATH`,
+so the pinned copy is the one that runs, and the pacman package is what a
+machine without `mise install` falls back to. Both are currently 0.10.0.
+
 `mise up` bumps the floating ones and rewrites this file in place — it is the
-live file that changes, so re-`chezmoi add ~/.config/mise/config.toml`
+live file that changes, so `chezmoi re-add ~/.config/mise/config.toml`
 afterwards. Per-project `mise.toml` files stay with their projects and are not
-managed here.
+managed here; note that plain `mise use <tool>` writes one into the current
+directory, so global changes need `mise use -g`.
 
 ## Hyprland input
 
