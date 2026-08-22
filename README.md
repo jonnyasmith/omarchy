@@ -183,6 +183,30 @@ afterwards. Per-project `mise.toml` files stay with their projects and are not
 managed here; note that plain `mise use <tool>` writes one into the current
 directory, so global changes need `mise use -g`.
 
+## Neovim keymaps
+
+`dot_config/nvim/` holds two files layered on top of the `omarchy-nvim`
+package's LazyVim starter. That package installs into
+`/etc/skel/.config/nvim/`, so `omarchy update` never touches the live config
+and these two files are the only nvim state tracked here.
+
+`lua/config/keymaps.lua` maps `<leader>w` to `:w`, which is AstroNvim's save
+binding. LazyVim leaves `<leader>w` unmapped and uses it as a which-key proxy
+for `<C-w>`, with two real maps beneath it — `<leader>wd` (delete window) and
+`<leader>wm` (zoom). Both are deleted first: while either exists, every save
+waits out `timeoutlen` (300ms in LazyVim) to disambiguate the longer sequence.
+Nothing is actually lost. `<leader>wd` was `<C-w>c`, every window command is
+still on `<C-w>`, which-key's window hydra is still on `<C-w><Space>`, and
+LazyVim maps zoom to `<leader>uZ` on the same line as `<leader>wm`.
+
+`lua/plugins/which-key.lua` demotes the now-childless `windows` group to a
+plain `Save` entry via `group = false, proxy = false, expand = false`. LazyVim
+declares `opts_extend = { "spec" }` on which-key, so a later spec entry for the
+same key merges over the stock one instead of replacing the list.
+
+`<C-s>` still saves as well; LazyVim maps it in `i`/`x`/`n`/`s` modes and that
+is left alone.
+
 ## Hyprland input
 
 `dot_config/hypr/input.lua` is the user-side Hyprland input override, loaded
