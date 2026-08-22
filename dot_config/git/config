@@ -39,7 +39,7 @@
 	personal = config user.email jonny.asmith@gmail.com
 	whoami   = config user.email
 [init]
-	defaultBranch = master
+	defaultBranch = main
 [pull]
 	rebase = true 			 # Rebase (instead of merge) on pull
 [push]
