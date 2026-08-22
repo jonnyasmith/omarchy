@@ -27,7 +27,7 @@ guide_ok=false
 cmp -s "$staged" "$guide" && guide_ok=true
 
 link_ok=false
-grep -qF 'fingerprint.md' "$index" && link_ok=true
+grep -qxF "$link" "$index" && link_ok=true
 
 if $guide_ok && $link_ok; then
   exit 0
@@ -40,6 +40,8 @@ if ! $guide_ok; then
 fi
 
 if ! $link_ok; then
-  # Keep it next to the other topic guides, above capture.md.
-  pkexec sed -i "/capture\.md/i $link" "$index"
+  # Anchor on the capture.md entry of the Topic Guides list, not on any prose
+  # mention of capture.md — "Example Requests" cites it too, and an unanchored
+  # match inserts the link into that list as well. First match only.
+  pkexec sed -i "0,/^- \[\`capture\.md\`\]/s##$link\n&#" "$index"
 fi
