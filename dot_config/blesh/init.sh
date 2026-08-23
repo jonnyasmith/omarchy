@@ -35,6 +35,38 @@ bleopt complete_auto_complete_opts=syntax-disabled
 # command name — i.e. on almost every keystroke of a long command.
 ble-face syntax_error='fg=203'
 
+# --- Keyboard protocol under herdr ------------------------------------------
+# `;` has no control-character encoding -- 59 & 0x1f is 27, i.e. ESC -- so
+# Ctrl+; exists only over a modern key protocol. foot always emits it as
+# \e[27;5;59~, and tmux re-encodes it as \e[59;5u for the pane.
+#
+# herdr is the odd one out, and not because it lacks the plumbing: it answers
+# DA2 as a generic xterm (`1;0;0`), so ble.sh selects xterm's modifyOtherKeys,
+# but herdr ignores \e[>4;2m and only re-encodes modified keys for a pane that
+# pushed the kitty keyboard protocol (\e[>1u). Ctrl+; then reaches bash as a
+# bare `;`. nvim gets the key right in the same pane because nvim asks for the
+# kitty protocol.
+#
+# ble.sh picks the method from the terminal it identified and exposes no
+# option to override it (`ble/term/modifyOtherKeys/.update`), so the identity
+# is what has to change: kitty:* selects the protocol, and the branch reads
+# the DA2 reply for the version, which must be >= 23. ble.sh then pushes
+# \e[>1u when it takes the terminal and pops it before running a command, so
+# no child program inherits a protocol it did not ask for. The other three
+# things this identity controls are all true of herdr anyway: `\e[N q` cursor
+# shapes, synchronized updates, and kitty CSI-u key decoding.
+#
+# term_DA2R fires just after ble.sh parses the DA2 reply -- earlier than that
+# and detection overwrites this; later and the first prompt has already
+# chosen modifyOtherKeys.
+if [[ $HERDR_ENV ]]; then
+  function ble/term/herdr-kitty-protocol.hook {
+    _ble_term_TERM[0]=kitty:23
+    _ble_term_DA2R[0]='1;4023;23'
+  }
+  blehook term_DA2R+=ble/term/herdr-kitty-protocol.hook
+fi
+
 # --- Keybindings ------------------------------------------------------------
 # Ported from .zshrc:
 #   bindkey '^ '          autosuggest-accept
@@ -49,18 +81,15 @@ ble-face syntax_error='fg=203'
 # Both only ever fire in a bare terminal window: Ctrl+Space is the prefix key
 # of tmux (tmux.conf `set -g prefix C-Space`) and of herdr
 # (~/.config/herdr/config.toml `prefix = "ctrl+space"`), so inside either
-# multiplexer the key is swallowed before bash sees it. M-; is the accept key
-# that survives all three, and is bound in none of them, nor in nvim.
+# multiplexer the key is swallowed before bash sees it, which is why the
+# accept key is Ctrl+; and Ctrl+Space is only kept for a bare window.
 #
-# Alt+; is the portable one: herdr drops the Ctrl modifier off every
-# punctuation key -- feed it either encoding of Ctrl+; (foot's \e[27;5;59~ or
-# the CSI-u \e[59;5u) and the pane receives a bare `;`. Its own default config
-# admits as much ("punctuation-with-modifiers may depend on your terminal").
-# Alt+; needs no protocol at all: it is ESC ; on the wire, so every layer
-# forwards it verbatim. Ctrl+; is bound too and works everywhere except herdr:
-# bare foot sends \e[27;5;59~ once ble.sh asks for modifyOtherKeys, and tmux
-# forwards it as \e[59;5u because tmux.conf sets `extended-keys always`, which
-# forces mode 1 whether or not the pane asked for it.
+# Ctrl+; is the one to press. It rides the same wire everywhere: foot emits
+# \e[27;5;59~ directly, tmux forwards it as \e[59;5u because tmux.conf sets
+# `extended-keys always`, and herdr sends the CSI-u form too now that the
+# block above makes ble.sh speak the kitty protocol there. Alt+; stays bound
+# as the no-protocol fallback -- it is ESC ; on the wire, so it survives a
+# terminal that has none of this.
 #
 # ESC ; does not collide with the C-[ cancel below. ble.sh's decoder waits out
 # the escape timeout, so a lone ESC still cancels the suggestion and ESC
