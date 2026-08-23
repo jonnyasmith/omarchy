@@ -78,11 +78,9 @@ about to create it in `~`.
 See `README.md` for the per-item detail. Summary:
 
 - `dot_config/hypr/input.lua` — Hyprland input overrides (Caps Lock ⇄ Escape).
-- `dot_local/bin/executable_caffeine` + `dot_config/omarchy/plugins/jonny.caffeine/`
-  + `dot_config/omarchy/extensions/omarchy-menu.jsonc` +
-  `dot_config/omarchy/shell.json` — the caffeine keep-awake button: script,
-  bar widget, its preset submenu, and the bar layout that places it. Bar widget
-  QML edits need `omarchy restart shell`, not just a save.
+- `dot_config/omarchy/shell.json` — the bar layout and the `idle` screensaver
+  and lock timeouts. Stock apart from the widget order and the `jonny.ports`
+  entry. Bar widget QML edits need `omarchy restart shell`, not just a save.
 - `dot_config/omarchy/plugins/jonny.ports/` — the dev-ports widget: which local
   servers are listening, labelled from `/proc/<pid>/cwd` rather than the useless
   process name, click a row to open it. `ports.sh` does the scanning and runs
