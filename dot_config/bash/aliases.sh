@@ -18,6 +18,13 @@ command -v bat >/dev/null 2>&1 && alias cat="bat --paging=never"
 
 alias vim='nvim'
 
+# --- agents -----------------------------------------------------------------
+# Overrides Omarchy's c='opencode --auto'. omp is the agent in use here, and
+# the layout helpers all reach their agent through this alias: `hdl c`, plus
+# ic='tdl c' and icx='tdl c cx'. Omarchy's cx (claude) and cy (codex) are left
+# alone; `opencode --auto` is still one word away when it is wanted.
+alias c='omp'
+
 # --- git --------------------------------------------------------------------
 # These lean on the one-letter git aliases in ~/.config/git/config (a, cm, d,
 # f, l, m, p, r, s). Both halves came over together; neither works alone.

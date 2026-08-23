@@ -26,6 +26,23 @@ _herdr_label() {
 	herdr pane rename "$pane" "$@" >/dev/null
 }
 
+# Name an AI pane after the tool it actually runs. The layouts are called with
+# the one-letter agent aliases, so `c` is expanded (to omp here) rather than
+# used verbatim, and a chained expansion is read from its last command --
+# Omarchy's cx clears the screen with printf first, and the pane wants to be
+# called claude, not printf. Falls back to the first word as given, which is
+# what happens in a non-interactive shell where no aliases exist.
+# Usage: _herdr_agent_label <command>
+_herdr_agent_label() {
+	local cmd="$1" expansion
+	if [[ $cmd != *[[:space:]]* ]] && expansion=$(alias -- "$cmd" 2>/dev/null); then
+		expansion=${expansion#*=\'}
+		cmd=${expansion%\'}
+	fi
+	cmd=${cmd##*&& }
+	printf '%s' "${cmd%% *}"
+}
+
 # Create a Herdr Dev Layout with editor, ai, and terminal
 # Usage: hdl <c|cx|codex|other_ai> [<second_ai>]
 hdl() {
@@ -58,12 +75,12 @@ hdl() {
 
 	_herdr_label "$editor_pane" editor
 	_herdr_label "$cmd_pane" cmd
-	_herdr_label "$ai_pane" "${ai%% *}"
+	_herdr_label "$ai_pane" "$(_herdr_agent_label "$ai")"
 
 	# If second AI provided, split the AI pane vertically
 	if [[ -n $ai2 ]]; then
 		ai2_pane=$(_herdr_split "$ai_pane" down 0.5 "$current_dir")
-		_herdr_label "$ai2_pane" "${ai2%% *}"
+		_herdr_label "$ai2_pane" "$(_herdr_agent_label "$ai2")"
 		herdr pane run "$ai2_pane" "$ai2" >/dev/null
 	fi
 
@@ -74,7 +91,8 @@ hdl() {
 	herdr pane run "$editor_pane" "$EDITOR ." >/dev/null
 }
 
-# Create a Herdr Dev Square layout with editor, diff watch, terminal, and opencode
+# Create a Herdr Dev Square layout with editor, diff watch, terminal, and agent.
+# Upstream hardcodes `opencode` in the fourth pane; this runs omp instead.
 # Usage: hds
 hds() {
 	[[ -n $1 ]] && {
@@ -87,7 +105,7 @@ hds() {
 	}
 
 	local current_dir="${PWD}"
-	local editor_pane diff_pane terminal_pane opencode_pane
+	local editor_pane diff_pane terminal_pane agent_pane
 
 	editor_pane="$HERDR_PANE_ID"
 
@@ -95,14 +113,14 @@ hds() {
 
 	terminal_pane=$(_herdr_split "$editor_pane" down 0.5 "$current_dir")
 	diff_pane=$(_herdr_split "$editor_pane" right 0.5 "$current_dir")
-	opencode_pane=$(_herdr_split "$terminal_pane" right 0.5 "$current_dir")
+	agent_pane=$(_herdr_split "$terminal_pane" right 0.5 "$current_dir")
 
 	_herdr_label "$editor_pane" editor
 	_herdr_label "$diff_pane" diff
 	_herdr_label "$terminal_pane" cmd
-	_herdr_label "$opencode_pane" opencode
+	_herdr_label "$agent_pane" omp
 
 	herdr pane run "$editor_pane" "nvim ." >/dev/null
 	herdr pane run "$diff_pane" "hunk diff --watch" >/dev/null
-	herdr pane run "$opencode_pane" "opencode" >/dev/null
+	herdr pane run "$agent_pane" "omp" >/dev/null
 }
