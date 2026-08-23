@@ -52,17 +52,21 @@ ble-face syntax_error='fg=203'
 # multiplexer the key is swallowed before bash sees it. M-; is the accept key
 # that survives all three, and is bound in none of them, nor in nvim.
 #
-# It is Alt+; and not Ctrl+; because herdr drops the Ctrl modifier off every
-# punctuation key: feed it either encoding of Ctrl+; -- foot's \e[27;5;59~ or
-# the CSI-u \e[59;5u -- and the pane receives a bare `;`. Its own default
-# config admits as much ("punctuation-with-modifiers may depend on your
-# terminal"). Alt+; needs no protocol at all: it is ESC ; on the wire, so
-# every layer forwards it verbatim.
+# Alt+; is the portable one: herdr drops the Ctrl modifier off every
+# punctuation key -- feed it either encoding of Ctrl+; (foot's \e[27;5;59~ or
+# the CSI-u \e[59;5u) and the pane receives a bare `;`. Its own default config
+# admits as much ("punctuation-with-modifiers may depend on your terminal").
+# Alt+; needs no protocol at all: it is ESC ; on the wire, so every layer
+# forwards it verbatim. Ctrl+; is bound too and works everywhere except herdr:
+# bare foot sends \e[27;5;59~ once ble.sh asks for modifyOtherKeys, and tmux
+# forwards it as \e[59;5u because tmux.conf sets `extended-keys always`, which
+# forces mode 1 whether or not the pane asked for it.
 #
 # ESC ; does not collide with the C-[ cancel below. ble.sh's decoder waits out
 # the escape timeout, so a lone ESC still cancels the suggestion and ESC
 # followed by anything else is read as a meta key, as it always was.
 ble-bind -m auto_complete -f 'M-;' auto_complete/insert
+ble-bind -m auto_complete -f 'C-;' auto_complete/insert
 ble-bind -m auto_complete -f 'C-SP' auto_complete/insert
 ble-bind -m auto_complete -f 'C-@' auto_complete/insert
 ble-bind -m auto_complete -f 'C-[' auto_complete/cancel

@@ -71,8 +71,16 @@ Load order in `dot_bashrc` is load-bearing:
 `$XDG_CONFIG_HOME/blesh/init.sh` itself; nothing sources it). It holds only
 departures from ble.sh's defaults: grey ghost text instead of a highlighted
 block, red-on-default instead of red-background for an unknown command,
-`Ctrl+Space` to accept a suggestion, `Esc` to dismiss it, `Shift+Enter` for a
-literal newline, and `complete_auto_complete_opts=syntax-disabled`.
+`Alt+;` / `Ctrl+;` / `Ctrl+Space` to accept a suggestion, `Esc` to dismiss it,
+`Shift+Enter` for a literal newline, and
+`complete_auto_complete_opts=syntax-disabled`.
+
+`Alt+;` is the one that works in every layer, because it is plain `ESC ;` on
+the wire. `Ctrl+;` needs a terminal keyboard protocol to be distinguishable at
+all: foot sends it as `\e[27;5;59~` once ble.sh asks for `modifyOtherKeys`, and
+tmux re-encodes it as `\e[59;5u` because `dot_config/tmux/tmux.conf` sets
+`extended-keys always`. Herdr drops the `Ctrl` off punctuation keys, so inside
+`h` only `Alt+;` accepts.
 
 That last one restricts inline suggestions to shell history, matching zsh.
 ble.sh's extra `syntax` source guesses filenames *inside option clusters* —
