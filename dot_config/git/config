@@ -16,7 +16,8 @@
 	co   = checkout
 	cob  = checkout -b
 	cp   = cherry-pick -x
-	d    = diff --ignore-space-at-eol -b -w --ignore-blank-lines
+	d    = diff
+	dw   = diff --ignore-space-at-eol -b -w --ignore-blank-lines
 	f    = fetch
 	i    = init
 	m    = merge
@@ -58,7 +59,7 @@
 	sort = -version:refname  # Sort version numbers as you would expect
 [rerere]
 	enabled = true           # Record and reuse conflict resolutions
-	autoupdate = true        # Apply stored conflict resolutions automatically
+	autoupdate = false       # Leave reused resolutions unstaged for review
 [user]
 	name = Jonny Smith
 	email = jonny.asmith@gmail.com
