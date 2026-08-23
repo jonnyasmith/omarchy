@@ -73,6 +73,9 @@ const LABELS: Record<string, string> = {
 	"google-antigravity": "antigravity",
 };
 
+/** OpenAI retired the 5h rolling window; only the 7d budget is real there. */
+const NO_FIVE_HOUR: Record<string, true> = { openai: true, "openai-codex": true };
+
 type UsageSession = { fetchUsageReports?: (signal?: AbortSignal) => Promise<unknown> };
 
 const REFRESH_MS = 120_000;
@@ -112,7 +115,7 @@ function parse(reports: unknown): Row[] {
 			if (fraction === undefined) continue;
 			const id = limit.window?.id ?? limit.scope?.windowId;
 			const key = id === "5h" ? "fiveHour" : id === "7d" ? "sevenDay" : undefined;
-			if (!key) continue;
+			if (!key || (key === "fiveHour" && NO_FIVE_HOUR[provider])) continue;
 			const percent = fraction * 100;
 			// Providers report per-tier sub-buckets beside the account-wide window
 			// (`7 days (Spark)`, `Claude 7 Day (Fable)`). The untiered one is the

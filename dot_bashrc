@@ -25,3 +25,4 @@ unset _bashrc_d
 
 # Hand the line editor over to ble.sh. Must stay last.
 [[ ${BLE_VERSION-} ]] && ble-attach
+. "$HOME/.cargo/env"

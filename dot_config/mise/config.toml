@@ -2,6 +2,7 @@
 minimum_release_age = "7d"
 
 [tools]
+"aqua:modem-dev/hunk" = "latest"
 azure-cli = "latest"
 bun = "1"
 claude = "latest"
@@ -12,6 +13,7 @@ gh = "latest"
 go = "latest"
 node = ["26", "24", "22"]
 oh-my-pi = "latest"
+opencode = "latest"
 pnpm = ["11", "10"]
 python = ["3.14", "3.13"]
 uv = "latest"
