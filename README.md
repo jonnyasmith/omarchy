@@ -135,6 +135,43 @@ herdr config check          # validate the file
 herdr server reload-config  # apply it to the running server, no restart
 ```
 
+## Tmux
+
+`dot_config/tmux/tmux.conf` is Omarchy's own `config/tmux/tmux.conf` with two
+departures. Because Omarchy copies that file into `~/.config/` rather than
+layering an override on top of it, the managed copy is the whole file and future
+upstream edits to it have to be merged in by hand.
+
+Pane focus is `Ctrl+Shift+h/j/k/l` instead of `Ctrl+Alt+<arrow>`, matching the
+vim direction keys.
+
+Making `Ctrl+Shift+<letter>` arrive at all is the second departure. A terminal
+cannot distinguish `Ctrl+Shift+l` from `Ctrl+l` in the legacy encoding — both
+are the byte `0x0c` — so the key needs `modifyOtherKeys` or the Kitty keyboard
+protocol:
+
+```tmux
+set -s extended-keys always
+set -s extended-keys-format csi-u
+set -as terminal-features ",xterm*:extkeys"
+set -as terminal-features ",foot*:extkeys"
+```
+
+Three things there are load-bearing:
+
+- `extended-keys` is a **server** option, so `set -s`. Omarchy sets it with
+  `set -g`.
+- `always`, not `on`. With `on`, tmux only forces the protocol when the program
+  in the pane asks for it, so whether `Ctrl+Shift+h` works depends on what is
+  running — ble.sh asks, most things do not.
+- `extkeys` has to name the terminal's `TERM`. Omarchy declares it for
+  `xterm-kitty` only, but `~/.config/foot/foot.ini` (Omarchy's, unmanaged) sets
+  `term=xterm-256color`, so tmux never believed the terminal could do it.
+
+The protocol is negotiated when a client attaches. Sourcing the file into a
+running server is not enough for clients that are already attached — detach and
+reattach, or `tmux kill-server`.
+
 ## Starship prompt
 
 `dot_config/starship.toml` is the prompt Omarchy's bash rc initialises. `format`

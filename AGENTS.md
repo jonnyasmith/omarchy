@@ -91,6 +91,11 @@ See `README.md` for the per-item detail. Summary:
   zsh-autosuggestions equivalent), its settings, its fzf/zoxide integrations,
   and the aliases ported from the old zsh setup. Requires `yay -S blesh-git`;
   every reference is guarded.
+- `dot_config/tmux/tmux.conf` — Omarchy's tmux config plus vim-direction pane
+  focus keys (`Ctrl+Shift+h/j/k/l`) and the `extended-keys always` / `extkeys`
+  settings those keys need to reach tmux at all. A whole-file copy, because
+  Omarchy installs that path rather than layering an override, so upstream
+  changes need merging by hand.
 - `dot_config/git/config` + `config.local.tmpl` + `config.work.tmpl` — git
   config, the one-letter aliases the bash `g*` aliases call, and the
   work-account routing: `insteadOf` rewrites a work org's `github.com` remotes
