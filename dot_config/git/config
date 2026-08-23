@@ -17,6 +17,7 @@
 	cob  = checkout -b
 	cp   = cherry-pick -x
 	d    = diff
+	dt   = difftool
 	dw   = diff --ignore-space-at-eol -b -w --ignore-blank-lines
 	f    = fetch
 	i    = init
@@ -43,12 +44,21 @@
 	defaultBranch = main
 [pull]
 	rebase = true 			 # Rebase (instead of merge) on pull
+[merge]
+	tool = vscode            # Resolve conflicts with VS Code's merge editor
+	conflictStyle = zdiff3   # Include the common ancestor in conflict markers
+[mergetool]
+	prompt = false           # Open each conflicted file without confirmation
+	keepBackup = false       # Do not leave .orig files after resolution
 [push]
 	autoSetupRemote = true   # Automatically set upstream branch on push
 [diff]
+	tool = vscode            # Review diffs with VS Code
 	algorithm = histogram    # Clearer diffs on moved/edited lines
 	colorMoved = plain       # Highlight moved blocks in diffs
 	mnemonicPrefix = true    # More intuitive refs in diff output
+[difftool]
+	prompt = false           # Open each changed file without confirmation
 [commit]
 	verbose = true           # Include diff comment in commit message template
 [column]
