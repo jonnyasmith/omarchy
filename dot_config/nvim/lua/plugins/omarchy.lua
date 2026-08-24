@@ -20,8 +20,10 @@ local function theme_spec()
   return {}
 end
 
--- Omarchy carries the colorscheme name on the LazyVim spec entry; that entry is
--- disabled below, so read the name straight from the file.
+-- Omarchy carries the colorscheme on the LazyVim spec entry; that entry is
+-- disabled below, so read it straight from the file. It is usually a name
+-- string, but some shipped themes (e.g. Azure Glow) provide a function that
+-- sets highlight groups directly -- LazyVim calls such functions, so we must too.
 local function theme_colorscheme(spec)
   for _, entry in ipairs(spec) do
     if entry[1] == "LazyVim/LazyVim" and entry.opts and entry.opts.colorscheme then return entry.opts.colorscheme end
@@ -43,7 +45,7 @@ return {
     "AstroNvim/astroui",
     opts = function(_, opts)
       local colorscheme = theme_colorscheme(theme_spec())
-      if colorscheme then opts.colorscheme = colorscheme end
+      if type(colorscheme) == "string" then opts.colorscheme = colorscheme end
     end,
   },
 
@@ -53,6 +55,43 @@ return {
     lazy = false,
     priority = 1000,
     config = function()
+      local function reapply_transparency()
+        if vim.fn.filereadable(transparency_file) == 1 then
+          vim.defer_fn(function()
+            vim.cmd.source(transparency_file)
+            vim.api.nvim_exec_autocmds("ColorScheme", { modeline = false })
+            vim.cmd "redraw!"
+          end, 5)
+        end
+      end
+
+      -- Function-shaped themes have no colorscheme plugin; clear and call directly.
+      local function apply_function_theme(fn)
+        vim.cmd "highlight clear"
+        if vim.fn.exists "syntax_on" == 1 then vim.cmd "syntax reset" end
+        vim.o.background = "dark"
+        pcall(fn)
+        vim.api.nvim_exec_autocmds("ColorScheme", { modeline = false })
+        vim.cmd "redraw!"
+        reapply_transparency()
+      end
+
+      -- AstroUI only accepts a colorscheme name, so at startup a function theme
+      -- is applied here, over whatever colorscheme AstroUI loaded.
+      local startup = theme_colorscheme(theme_spec())
+      if type(startup) == "function" then
+        if vim.v.vim_did_enter == 1 then
+          vim.schedule(function() apply_function_theme(startup) end)
+        else
+          vim.api.nvim_create_autocmd("VimEnter", {
+            once = true,
+            callback = function()
+              vim.schedule(function() apply_function_theme(startup) end)
+            end,
+          })
+        end
+      end
+
       vim.api.nvim_create_autocmd("User", {
         pattern = "LazyReload",
         callback = function()
@@ -60,6 +99,7 @@ return {
             local spec = theme_spec()
             local colorscheme = theme_colorscheme(spec)
             if not colorscheme then return end
+            if type(colorscheme) == "function" then return apply_function_theme(colorscheme) end
             local plugin_name = theme_plugin_name(spec)
 
             -- Clear all highlight groups before applying the new theme
@@ -94,13 +134,7 @@ return {
               vim.cmd "redraw!"
 
               -- Reapply transparency and let UI plugins (heirline etc.) resync
-              if vim.fn.filereadable(transparency_file) == 1 then
-                vim.defer_fn(function()
-                  vim.cmd.source(transparency_file)
-                  vim.api.nvim_exec_autocmds("ColorScheme", { modeline = false })
-                  vim.cmd "redraw!"
-                end, 5)
-              end
+              reapply_transparency()
             end, 5)
           end)
         end,
