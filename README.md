@@ -396,29 +396,71 @@ Two details are load-bearing:
 A theme with no `colors.toml` renders nothing; the hook then leaves the previous
 file in place and omp keeps the theme it has loaded.
 
-## Neovim keymaps
+## Neovim
 
-`dot_config/nvim/` holds two files layered on top of the `omarchy-nvim`
-package's LazyVim starter. That package installs into
-`/etc/skel/.config/nvim/`, so `omarchy update` never touches the live config
-and these two files are the only nvim state tracked here.
+`dot_config/nvim/` is the entire config, not an overlay on Omarchy's. The
+`omarchy-nvim` package installs its LazyVim starter into
+`/etc/skel/.config/nvim/`, which is only copied when a user account is created,
+so `omarchy update` never touches the live config and replacing it wholesale
+costs nothing. What is tracked here is the [AstroNvim v6
+template](https://github.com/AstroNvim/template) plus a bridge that keeps
+Omarchy's theme switching working against AstroNvim instead of LazyVim.
 
-`lua/config/keymaps.lua` maps `<leader>w` to `:w`, which is AstroNvim's save
-binding. LazyVim leaves `<leader>w` unmapped and uses it as a which-key proxy
-for `<C-w>`, with two real maps beneath it — `<leader>wd` (delete window) and
-`<leader>wm` (zoom). Both are deleted first: while either exists, every save
-waits out `timeoutlen` (300ms in LazyVim) to disambiguate the longer sequence.
-Nothing is actually lost. `<leader>wd` was `<C-w>c`, every window command is
-still on `<C-w>`, which-key's window hydra is still on `<C-w><Space>`, and
-LazyVim maps zoom to `<leader>uZ` on the same line as `<leader>wm`.
+Most of the tree is the template as it shipped. `lua/community.lua`,
+`lua/polish.lua`, and `lua/plugins/{user,astrocore,astroui,astrolsp,mason,none-ls,treesitter}.lua`
+all still open with `if true then return {} end`, and `dot_config/nvim/README.md`
+is still the template's own readme. They are tracked verbatim so the commented
+examples stay to hand; none of them affect a running nvim. Four files do the
+work:
 
-`lua/plugins/which-key.lua` demotes the now-childless `windows` group to a
-plain `Save` entry via `group = false, proxy = false, expand = false`. LazyVim
-declares `opts_extend = { "spec" }` on which-key, so a later spec entry for the
-same key merges over the stock one instead of replacing the list.
+- `lua/plugins/symlink_theme.lua` is a chezmoi `symlink_` entry, so the live
+  `lua/plugins/theme.lua` points at
+  `~/.local/state/omarchy/current/theme/neovim.lua`. `omarchy theme set`
+  rewrites that path, lazy's change detection notices the symlink target moved
+  and fires `LazyReload`.
+- `lua/plugins/omarchy.lua` adapts what Omarchy writes there. The spec is
+  LazyVim-shaped — the theme's colorscheme plugin plus
+  `{ "LazyVim/LazyVim", opts = { colorscheme = ... } }` — so this file disables
+  the `LazyVim/LazyVim` entry, hands the colorscheme to AstroUI at startup, and
+  reapplies it live from a `LazyReload` handler. The handler force-reloads the
+  colorscheme plugin rather than trusting lazy's cache, because two themes can
+  share one plugin (every generic Omarchy 4 theme sits on `aether.nvim`) and
+  lazy will not rerun `setup()` with the new theme's opts otherwise.
+- `lua/plugins/all-themes.lua` registers every theme's colorscheme plugin as
+  `lazy = true`, so a theme switch never has to clone. Names and branches must
+  match Omarchy's generated spec exactly; the file's comments record what
+  mismatches cost.
+- `plugin/after/transparency.lua` strips `bg` from a list of highlight groups so
+  the terminal's own translucency shows through. Every theme apply re-sources
+  it, since a colorscheme resets those groups.
 
-`<C-s>` still saves as well; LazyVim maps it in `i`/`x`/`n`/`s` modes and that
-is left alone.
+A colorscheme is normally a name, but some themes (`azure-glow` here) put a
+function on `opts.colorscheme` that sets highlight groups directly. LazyVim
+calls such a function; AstroUI only accepts a name. `omarchy.lua` handles both:
+a name goes to AstroUI, a function is called directly after a `highlight clear`,
+at `VimEnter` on startup and in the `LazyReload` handler on a live switch.
+
+`dot_config/omarchy/themes/gruvbox/neovim.lua` is the one per-theme override,
+and it is Omarchy's own user-theme mechanism rather than anything nvim-specific.
+Omarchy's `gruvbox` `colors.toml` is really the gruvbox-material palette
+(fg `#d4be98`), but its shipped spec loads classic `ellisonleao/gruvbox.nvim`
+(fg `#ebdbb2`), so every other TUI disagreed with nvim. The override swaps in
+`sainnhe/gruvbox-material`, whose defaults match `colors.toml` exactly.
+
+### The lock file is `create_`
+
+`create_lazy-lock.json` uses that prefix deliberately. lazy.nvim rewrites
+`lazy-lock.json` on every `:Lazy update`, so a plain managed file would give one
+target two owners: every plugin update would report as drift, and `chezmoi
+apply` would roll the installed plugins back to whatever commit this repo
+pinned. `status.exclude` cannot suppress that — it selects entry types, not
+paths.
+
+`create_` inverts the authority. chezmoi writes the file only when the target is
+absent and never diffs or overwrites an existing one, so a new machine still
+lands on a plugin set known to work, the pin stays in git history for rollback,
+and day-to-day updates are silent. The trade is that the baseline only moves on
+a deliberate `chezmoi re-add`, so expect it to lag.
 
 ## Hyprland input
 

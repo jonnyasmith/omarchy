@@ -99,6 +99,16 @@ See `README.md` for the per-item detail. Summary:
 - `dot_config/foot/foot.ini` — Omarchy's foot config plus `alpha=0.9` in
   `[colors-dark]` (foot 1.27 deprecated plain `[colors]`). Also a whole-file
   copy, for the same reason as `tmux.conf`.
+- `dot_config/nvim/` — the whole Neovim config: the AstroNvim v6 template, most
+  of it still the shipped `if true then return {} end` stubs, plus the Omarchy
+  theme bridge (`lua/plugins/omarchy.lua`, `all-themes.lua`, the `symlink_`
+  entry pointing `theme.lua` at the current Omarchy theme, and
+  `plugin/after/transparency.lua`). Omarchy's own starter installs to
+  `/etc/skel/`, so this replaces it outright and `omarchy update` cannot clash.
+  `dot_config/omarchy/themes/gruvbox/neovim.lua` overrides one theme's spec to
+  match its `colors.toml`. The lock file is `create_lazy-lock.json` on purpose:
+  lazy.nvim owns that file, so chezmoi seeds it only when absent and must never
+  be allowed to overwrite it — do not drop the `create_` prefix.
 - `dot_config/git/config` + `config.local.tmpl` + `config.work.tmpl` — git
   config, the one-letter aliases the bash `g*` aliases call, and the
   work-account routing: `insteadOf` rewrites a work org's `github.com` remotes
