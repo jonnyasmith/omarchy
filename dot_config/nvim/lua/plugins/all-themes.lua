@@ -66,6 +66,13 @@ return {
 		lazy = true,
 		priority = 1000,
 	},
+	-- User override in ~/.config/omarchy/themes/gruvbox/neovim.lua: omarchy's
+	-- gruvbox colors.toml is the gruvbox-material palette, not classic gruvbox.
+	{
+		"sainnhe/gruvbox-material",
+		lazy = true,
+		priority = 1000,
+	},
 	{
 		"rebelot/kanagawa.nvim",
 		lazy = true,
