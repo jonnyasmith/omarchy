@@ -96,6 +96,9 @@ See `README.md` for the per-item detail. Summary:
   settings those keys need to reach tmux at all. A whole-file copy, because
   Omarchy installs that path rather than layering an override, so upstream
   changes need merging by hand.
+- `dot_config/foot/foot.ini` — Omarchy's foot config plus `alpha=0.9` in
+  `[colors-dark]` (foot 1.27 deprecated plain `[colors]`). Also a whole-file
+  copy, for the same reason as `tmux.conf`.
 - `dot_config/git/config` + `config.local.tmpl` + `config.work.tmpl` — git
   config, the one-letter aliases the bash `g*` aliases call, and the
   work-account routing: `insteadOf` rewrites a work org's `github.com` remotes

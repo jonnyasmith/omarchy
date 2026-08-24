@@ -173,12 +173,36 @@ Three things there are load-bearing:
   in the pane asks for it, so whether `Ctrl+Shift+h` works depends on what is
   running — ble.sh asks, most things do not.
 - `extkeys` has to name the terminal's `TERM`. Omarchy declares it for
-  `xterm-kitty` only, but `~/.config/foot/foot.ini` (Omarchy's, unmanaged) sets
-  `term=xterm-256color`, so tmux never believed the terminal could do it.
+  `xterm-kitty` only, but `~/.config/foot/foot.ini` sets `term=xterm-256color`,
+  so tmux never believed the terminal could do it.
 
 The protocol is negotiated when a client attaches. Sourcing the file into a
 running server is not enough for clients that are already attached — detach and
 reattach, or `tmux kill-server`.
+
+## Foot terminal
+
+`dot_config/foot/foot.ini` is Omarchy's own `config/foot/foot.ini` with one
+addition, `alpha=0.9` for a translucent background. Omarchy installs that path
+instead of layering an override, so — as with `tmux.conf` — the managed copy is
+the whole file and upstream edits have to be merged by hand. `diff
+/usr/share/omarchy/config/foot/foot.ini ~/.config/foot/foot.ini` should show
+only the alpha block.
+
+The section it lives in is `[colors-dark]`, not `[colors]`. foot 1.27 split
+colors into `[colors-dark]` / `[colors-light]` and warns
+`deprecated: foot: [colors]: use [colors-dark] instead` on every start while the
+old name is used. `alpha` is a key of those sections, so it is per-theme: a
+`[colors-light]` copy would be needed as well before using
+`color-theme-toggle` or `initial-color-theme=light`.
+
+Colors themselves come from the `include=` on line 2,
+`~/.local/state/omarchy/current/theme/foot.ini`, which `omarchy theme set`
+rewrites. It is included before the local section, so nothing here fights it.
+
+`foot --check-config` parses the file and reports deprecations and bad values
+without opening a window. Running terminals do not reload; `omarchy restart
+terminal` or a new window picks changes up.
 
 ## Starship prompt
 
