@@ -790,6 +790,58 @@ Portainer's first-run admin account is created at <http://localhost:9000> and
 the window times out if it is left sitting; `docker restart portainer` reopens
 it.
 
+## Thermal and GPU power (XPS 15 9500)
+
+`run_after_xps15-thermal.sh` fixes two places where Omarchy's defaults meet
+five-year-old laptop cooling. It is gated on `product_name == "XPS 15 9500"`
+and does nothing on any other machine.
+
+**Package power.** Dell's firmware advertises PL1 68 W in both the MSR and the
+MMIO RAPL domain — 23 W above the i9-10885H's 45 W spec — with a 56 s window
+and PL2 135 W. This chassis cannot move that much heat. A `cpu-power-cap`
+oneshot unit writes 45 W / 28 s / 60 W to both domains, and is wanted by
+`multi-user.target` plus the four sleep targets because resume restores the
+firmware values.
+
+Measured on an all-core load, before: 62 W and a package parked at 100 C.
+After: a 58 W burst peaking at 91 C, pulled to 41 W and 74 C inside 20 s, then
+63 C steady. No Tjmax, no fan-max plateau.
+
+**Discrete GPU.** `install/hardware/nvidia.sh` writes `nvidia_drm modeset=1`
+plus early KMS for any NVIDIA GPU, with no hybrid-laptop branch. Aquamarine
+then renders the desktop on the Intel iGPU (`card1` is not a KMS device) while
+the 1650 Ti sits in D0 at 3 W and 57 C for the whole uptime, because nothing
+ever sets `power/control` and the kernel therefore never offers D3. The script
+installs `/etc/udev/rules.d/80-nvidia-pm.rules` (the rule `nvidia-utils`
+stopped shipping) and asks for fine-grained RTD3 explicitly with
+`NVreg_DynamicPowerManagement=0x02` in its own `/etc/modprobe.d` file, kept
+separate from the `nvidia.conf` Omarchy's installer rewrites wholesale.
+
+It also enables `nvidia-suspend`, `nvidia-resume` and `nvidia-hibernate`.
+`PreserveVideoMemoryAllocations` is already 1 on this system, and without those
+units nothing saves or restores that memory across a suspend.
+
+Verify after a reboot:
+
+```bash
+systemctl is-active cpu-power-cap.service
+grep -H . /sys/bus/pci/devices/0000:01:00.0/power/{control,runtime_status,runtime_suspended_time}
+```
+
+`runtime_suspended_time` must start climbing. If it stays at 0 the remaining
+holder is the compositor: `libEGL` enumerates the NVIDIA device at session
+start, and Hyprland keeps `/dev/nvidia0` open for the session. The only lever
+left then is blacklisting the driver, which costs CUDA and any dGPU use.
+
+What this script does **not** touch: the fan curve. `pwm1_enable` on this
+machine always reads 1 and `pwm1` always reads 255, which `sensors` renders as
+`MANUAL CONTROL` at 128%. That is a `dell_smm` reporting artifact, not a
+setting — the EC never returns the magic auto value from `I8K_SMM_GET_FAN`, so
+the driver reports manual, and writing `2` back is rejected with `EINVAL`
+because this firmware refuses the SMM set-fan call. Fan speed follows package
+temperature and nothing else; the fans idle near 4600 RPM whenever the package
+stays above roughly 65 C.
+
 ## SSH and the 1Password agent
 
 Ported from the previous multi-OS dotfiles, minus its macOS/Windows/WSL

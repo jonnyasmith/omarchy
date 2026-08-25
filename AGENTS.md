@@ -147,3 +147,7 @@ See `README.md` for the per-item detail. Summary:
 - `run_after_portainer.sh` — writes `/opt/portainer/docker-compose.yml` and runs
   the Portainer container on http://localhost:9000. Gated on `docker info`, so
   it defers rather than fails before the `docker` group re-login.
+- `run_after_xps15-thermal.sh` — caps RAPL package power to what this chassis
+  can cool (PL1 45 W / 28 s, PL2 60 W, both domains, re-applied after resume)
+  and enables PCIe runtime D3 plus the nvidia sleep units for the dGPU. Gated
+  on the DMI product name; read the README before editing.
