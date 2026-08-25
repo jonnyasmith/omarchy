@@ -33,6 +33,9 @@ for _bashrc_d in ~/.config/bash/*.sh; do
 done
 unset _bashrc_d
 
+# Rust toolchain, if rustup put one here. Appended by rustup's installer and
+# guarded because the file only exists once rustup has run on this machine.
+[[ -r $HOME/.cargo/env ]] && . "$HOME/.cargo/env"
+
 # Hand the line editor over to ble.sh. Must stay last.
 [[ ${BLE_VERSION-} ]] && ble-attach
-. "$HOME/.cargo/env"

@@ -15,17 +15,22 @@ Naming: `dot_config/hypr/input.lua` → `~/.config/hypr/input.lua`.
 `run_after_*` scripts execute on every apply. `.chezmoitemplates/` holds content
 included by templates, never applied on its own.
 
-No git remote is configured. Commits are local.
+`origin` is <https://github.com/jonnyasmith/omarchy.git> — public, hence rule 7.
 
-## The machine
+## The machines
 
-| | |
-|---|---|
-| Host | `dell-xps`, Arch Linux |
-| Distro layer | [Omarchy](https://omarchy.org/) 4.0.0-1 |
-| Compositor | Hyprland, configured in **Lua** under `~/.config/hypr/` |
-| Shell/bar | Omarchy shell (Quickshell), `~/.config/omarchy/shell.json` |
-| Fingerprint | Goodix `27c6:533c`, proprietary libfprint TOD driver |
+Two hosts share this source dir. Everything host-specific self-gates, so one
+`chezmoi apply` is correct on both — read the gate before assuming a script ran.
+
+| | `dell-xps` | `minisforum` |
+|---|---|---|
+| Chassis | Dell XPS 15 9500 laptop | Minisforum desktop, Ryzen AI 9 HX 370 |
+| Distro layer | [Omarchy](https://omarchy.org/) 4.0.0-1 | Omarchy 4.0.1 |
+| Fingerprint | Goodix `27c6:533c`, libfprint TOD driver | none — both fingerprint scripts exit 0 |
+| Thermal/GPU | `run_after_xps15-thermal.sh` applies | DMI gate fails, no-op |
+
+Common to both: Hyprland configured in **Lua** under `~/.config/hypr/`, the
+Omarchy shell (Quickshell) driven by `~/.config/omarchy/shell.json`, and Arch.
 
 Omarchy is an opinionated Arch + Hyprland distribution. It ships defaults in
 `/usr/share/omarchy/` and loads user overrides from `~/.config/` **after** them,
