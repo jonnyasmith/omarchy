@@ -353,21 +353,46 @@ the `colors.toml` tokens into every user `.tpl` and writes the result to
 `~/.local/state/omarchy/current/theme/starship.toml`; `dot_bashrc` exports
 `STARSHIP_CONFIG` pointing there, before Omarchy's rc runs `starship init bash`.
 
-No hook and no reload step, unlike the omp bridge: starship is a fresh process
-per prompt, so the next prompt reads the new file. The export is guarded with
-`[[ -r ]]` because a theme without a `colors.toml` is never rendered, and
-`STARSHIP_CONFIG` aimed at a missing file gives the stock prompt with no error.
+No reload step, unlike the omp bridge: starship is a fresh process per prompt, so
+the next prompt reads the new file. The export is guarded with `[[ -r ]]` because
+a theme without a `colors.toml` is never rendered, and `STARSHIP_CONFIG` aimed at
+a missing file gives the stock prompt with no error.
 
 Only `[username]` and `[hostname]` set a colour explicitly, so those are the
 only tokens in the template: `bold dimmed {{ green }}` and `bold {{ yellow }}`
 for root. Every other module keeps its stock ANSI-name style, which already
 follows the theme through `foot.ini`'s palette include — templating those would
-add tokens without changing a pixel. `accent` and the `mix` function are
-available for a hue outside the 16 ANSI slots, which this layout does not use.
-
+add tokens without changing a pixel. `accent` is available for a hue outside the
+16 ANSI slots, which this layout does not use; the renderer's `mix` function is
+not, for the reason the next section gives.
 One stock quirk, unchanged by the port: starship's style parser drops `bold`
 when `dimmed` follows it, so `user@host` renders as SGR `2` alone. It did the
 same with the ANSI name.
+
+### Why a theme-set hook renders it a second time
+
+`dot_config/omarchy/hooks/theme-set.d/starship-theme.hook` exists because a theme
+installed from a git repo may ship its own `starship.toml`, and one does:
+one-dark-pro added one in its commit `913d60c`, which `omarchy update` pulled in.
+`omarchy-theme-set` stages every colour file such a theme ships into `next-theme/`
+— `starship.toml` is not in its `INSTALLED_THEME_DENIED` list, correctly, since it
+is colour and runs no code — and `omarchy-theme-set-templates` then skips any
+`.tpl` whose output already exists. A theme's prompt therefore replaces this one
+wholesale, silently. Deleting the file from the theme clone fixes it until the next
+`omarchy update` pulls it back.
+
+The hook runs after both steps and renders the template over the staged file, so
+the prompt is this repo's whatever a theme ships. It resolves plain `{{ key }}`
+tokens from the staged `colors.toml` through `omarchy-theme-color --all`, the same
+source the stock renderer parses, and does *not* reimplement that renderer's `mix`
+and gradient functions. A leftover `{{` aborts the write and keeps the last good
+file rather than handing starship a config with a token in it — so a template that
+starts using `mix` needs this hook extended, and says so on stderr if it does not.
+
+`run_onchange_after_omarchy-themed.sh.tmpl` is keyed on both templates and both
+hooks and runs `omarchy-theme-refresh`, which re-renders and re-fires the hooks
+without changing the background. That is what converges a fresh machine or an
+edited template; every theme switch after that is the hook's own job.
 
 ## mise global tools
 
@@ -493,14 +518,17 @@ omp into that pipeline:
   `omarchy-system`, with every colour derived from `colors.toml` placeholders
   and `{{ mix a b n% }}`. User templates in `~/.config/omarchy/themed/` are
   processed before the packaged ones and win, so this is an override-safe
-  location.
+  location — against `/usr/share/omarchy/default/themed/`, at least. A file a
+  theme itself ships is staged earlier still and beats both, which is what the
+  starship hook exists to undo.
 - `dot_config/omarchy/hooks/theme-set.d/executable_omp-theme.hook` — copies the
   rendered `omp.json` to `~/.omp/agent/themes/omarchy-system.json` on every
   theme switch. `omarchy-hook` runs hooks through `bash`, so the exec bit is
   decoration, but the stock hooks beside it are 755.
-- `run_onchange_after_omarchy-omp-theme.sh.tmpl` — the template only renders
+- `run_onchange_after_omarchy-themed.sh.tmpl` — the template only renders
   inside a theme apply, so a fresh machine and an edited template both need one
-  `omarchy-theme-refresh`. Keyed on the hashes of the two files above.
+  `omarchy-theme-refresh`. Keyed on the hashes of the two files above and of the
+  two starship files, since both bridges converge the same way.
 
 Omarchy already ships `pi.json.tpl` and `omarchy-theme-set-pi`, but they target
 upstream `pi`: `~/.pi/agent/themes/` plus a `settings.json` theme key. omp is

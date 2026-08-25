@@ -8,15 +8,20 @@
 # omarchy-theme-set-templates substitutes the tokens below from the theme's
 # colors.toml and writes this to
 # ~/.local/state/omarchy/current/theme/starship.toml on every
-# `omarchy theme set`. ~/.bashrc points STARSHIP_CONFIG there. No hook and no
-# reload: starship is a fresh process per prompt, so the next prompt picks it
-# up. There is no ~/.config/starship.toml -- do not add one back, it would be
-# dead weight that STARSHIP_CONFIG overrides.
+# `omarchy theme set`. ~/.bashrc points STARSHIP_CONFIG there. No reload step:
+# starship is a fresh process per prompt, so the next prompt picks it up. There
+# is no ~/.config/starship.toml -- do not add one back, it would be dead weight
+# that STARSHIP_CONFIG overrides.
+#
+# A theme that ships its own starship.toml is staged over that render and wins,
+# so theme-set.d/starship-theme.hook renders this file again afterwards. That
+# hook resolves plain {{ token }} only -- adding a {{ mix ... }} here means
+# extending it, and it refuses to write rather than emit a stray token.
 #
 # Only the two colours this layout sets explicitly need tokens. Every other
 # module keeps its stock ANSI-name style, which already follows the theme
-# through foot.ini's palette include. The `accent` key and the `mix` function
-# are there if the prompt ever wants a hue outside the 16 ANSI slots.
+# through foot.ini's palette include. The `accent` key is there if the prompt
+# ever wants a hue outside the 16 ANSI slots.
 "$schema" = 'https://starship.rs/config-schema.json'
 
 format = """

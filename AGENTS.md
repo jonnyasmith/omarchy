@@ -108,13 +108,17 @@ See `README.md` for the per-item detail. Summary:
 - `dot_config/foot/foot.ini` — Omarchy's foot config plus `alpha=0.9` in
   `[colors-dark]` (foot 1.27 deprecated plain `[colors]`). Also a whole-file
   copy, for the same reason as `tmux.conf`.
-- `dot_config/omarchy/themed/starship.toml.tpl` — the starship prompt. There is
-  no `~/.config/starship.toml`: starship has no `include` and ignores a
-  multi-path `STARSHIP_CONFIG` (1.26.0), so unlike the nvim and omp bridges the
-  whole config must be the theme-rendered artifact. `omarchy theme set` renders
-  it to `~/.local/state/omarchy/current/theme/starship.toml` and `dot_bashrc`
-  exports `STARSHIP_CONFIG` at that path. No hook: starship re-reads the file
-  every prompt.
+- `dot_config/omarchy/themed/starship.toml.tpl` +
+  `dot_config/omarchy/hooks/theme-set.d/executable_starship-theme.hook` — the
+  starship prompt. There is no `~/.config/starship.toml`: starship has no
+  `include` and ignores a multi-path `STARSHIP_CONFIG` (1.26.0), so unlike the
+  nvim and omp bridges the whole config must be the theme-rendered artifact.
+  `omarchy theme set` renders it to
+  `~/.local/state/omarchy/current/theme/starship.toml` and `dot_bashrc` exports
+  `STARSHIP_CONFIG` at that path. No reload step: starship re-reads the file
+  every prompt. The hook then renders the template a second time, because a
+  theme installed from a git repo may ship its own `starship.toml`, which is
+  staged first and makes the stock renderer skip the template entirely.
 - `dot_config/nvim/` — the whole Neovim config: the AstroNvim v6 template, most
   of it still the shipped `if true then return {} end` stubs, plus the Omarchy
   theme bridge (`lua/plugins/omarchy.lua`, `all-themes.lua`, the `symlink_`
@@ -131,7 +135,8 @@ See `README.md` for the per-item detail. Summary:
   onto the `github-work` ssh alias, and `includeIf hasconfig` swaps in the work
   email. Renaming that alias means editing `~/.ssh/config` too.
 - `dot_omp/private_agent/` + `dot_config/omarchy/themed/omp.json.tpl` +
-  `dot_config/omarchy/hooks/theme-set.d/` + its `run_onchange_after_` script —
+  `dot_config/omarchy/hooks/theme-set.d/` +
+  `run_onchange_after_omarchy-themed.sh.tmpl` —
   the Oh My Pi agent config, the custom status line and its `quota`/`context_pct`
   extension, and the Omarchy theme bridge: the template renders `colors.toml`
   into an omp theme on every `omarchy theme set` and the hook copies it into

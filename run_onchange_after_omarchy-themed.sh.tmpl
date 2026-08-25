@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+#
+# Re-renders the omarchy theme templates this repo owns, and fires the theme-set
+# hooks that push the results where the apps read them:
+#
+#   omp.json.tpl      -> ~/.omp/agent/themes/omarchy-system.json  (omp-theme.hook)
+#   starship.toml.tpl -> current/theme/starship.toml              (starship-theme.hook)
+#
+# A template only renders inside `omarchy theme set`, which writes every
+# ~/.config/omarchy/themed/*.tpl into the current-theme state dir and then runs
+# the theme-set hooks. So a fresh machine and an edited template both need one
+# re-apply to converge; the theme-set.d hooks handle every switch after that.
+#
+# run_onchange_, keyed on the four files below, so a plain `chezmoi apply` does
+# not re-apply the theme on every run.
+#
+# omp.json.tpl: {{ include "dot_config/omarchy/themed/omp.json.tpl" | sha256sum }}
+# omp-theme.hook: {{ include "dot_config/omarchy/hooks/theme-set.d/executable_omp-theme.hook" | sha256sum }}
+# starship.toml.tpl: {{ include "dot_config/omarchy/themed/starship.toml.tpl" | sha256sum }}
+# starship-theme.hook: {{ include "dot_config/omarchy/hooks/theme-set.d/executable_starship-theme.hook" | sha256sum }}
+
+set -euo pipefail
+
+# Not an omarchy machine, or too old to refresh.
+command -v omarchy-theme-refresh >/dev/null || exit 0
+
+# Keeps the background: this is a re-render, not a theme change.
+omarchy-theme-refresh

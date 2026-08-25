@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Re-render the starship prompt after omarchy-theme-set-templates declined to.
+#
+# A theme installed from a git repo may ship its own starship.toml -- one-dark-pro
+# added one in its commit 913d60c, which `omarchy update` pulled in. omarchy-theme-set
+# stages every colour file such a theme ships into next-theme/ (starship.toml is not
+# in its INSTALLED_THEME_DENIED list, and rightly so: it is colour, it runs no code),
+# and omarchy-theme-set-templates then skips any .tpl whose output already exists.
+# The theme's prompt therefore replaces ~/.config/omarchy/themed/starship.toml.tpl
+# wholesale. This hook renders the template again over the staged file, so the prompt
+# stays ours whatever a theme ships. Deleting the file from the theme clone would work
+# until the next pull restores it.
+#
+# Only plain `{{ key }}` tokens are substituted -- all the template uses. The `mix`
+# and gradient functions of the stock renderer are not reimplemented here; a leftover
+# `{{` aborts the write instead, leaving the last good file in place.
+
+set -euo pipefail
+
+theme="$HOME/.local/state/omarchy/current/theme"
+tpl="$HOME/.config/omarchy/themed/starship.toml.tpl"
+target="$theme/starship.toml"
+
+# No template, or a theme with no palette to render it against.
+[[ -f $tpl && -f $theme/colors.toml ]] || exit 0
+command -v omarchy-theme-color >/dev/null || exit 0
+
+sed_script=$(mktemp)
+rendered=$(mktemp)
+trap 'rm -f "$sed_script" "$rendered"' EXIT
+
+# Same source of truth as the stock renderer: one tab-separated key/value pair per
+# colour, with the legacy colorN aliases and derived shades already resolved.
+while IFS=$'\t' read -r key value; do
+  printf 's|{{ %s }}|%s|g\n' "$key" "$value" >>"$sed_script"
+done < <(omarchy-theme-color --file "$theme/colors.toml" --all)
+
+sed -f "$sed_script" "$tpl" >"$rendered"
+
+# Comment lines are exempt: the template documents its own token syntax in one.
+if grep -v '^[[:space:]]*#' "$rendered" | grep -q '{{'; then
+  echo "starship-theme.hook: unresolved token in $tpl, kept $target" >&2
+  exit 0
+fi
+
+# Copy, not mv: nothing watches this path, but the theme dir is the state omarchy
+# owns and a foreign inode there is a surprise waiting to happen.
+cp "$rendered" "$target"
