@@ -962,6 +962,53 @@ tailnet needs a `pf` anchor or the Application Firewall, so until that is done
 `macmini` is key-only but not tailnet-only — a weaker posture than the two Linux
 hosts, and the reason this is documented rather than scripted.
 
+## System locale
+
+`run_after_locale.sh` sets `LANG=en_GB.UTF-8` in the two places a locale has to
+be set, because on Arch neither one covers the other.
+
+Omarchy's installer asks for the keyboard layout but hardcodes the locale, so
+both machines came out of `omarchy-install` mismatched — `VC Keymap: uk`,
+`X11 Layout: gb`, `LANG=en_US.UTF-8` — with `en_GB.UTF-8` commented out in
+`/etc/locale.gen` and absent from `locale -a`. Order matters when fixing that:
+`localectl set-locale` on an ungenerated locale writes a `locale.conf` nothing
+can load, which is worse than the wrong locale, so the script runs `locale-gen`
+first and only then `localectl`.
+
+The second file is the one that is easy to miss. `/etc/locale.conf` is read by
+**systemd**, which exports `LANG` into the user manager's environment; a
+graphical session inherits it from there. An `sshd` session does not — the shell
+is a child of `sshd`, not of the user manager, and the only locale channel PAM
+offers is `pam_env`, which reads `/etc/environment` and nothing else. Arch ships
+that file with comments only, so before this script every ssh login here landed
+in the C locale with `LANG` empty.
+
+That stayed invisible until something read `LANG`. `herdr --remote minisforum`
+runs `ssh minisforum herdr server`, so the remote Herdr server inherited the
+empty value and passed it to every pane it spawned, and ble.sh opened each one
+with:
+
+```
+ble.sh: suspicious environment: $LANG is empty.
+```
+
+ble.sh was right and merely first; anything else in those panes was in the C
+locale too, which is what makes this worth fixing at `/etc/environment` rather
+than silencing in `dot_bashrc`. A shell-level default would also be too late —
+`dot_bashrc` sources ble.sh at line 14, well before the `dot_config/bash/*.sh`
+glob — and would leave every non-bash program in the pane unfixed.
+
+`LC_COLLATE` is deliberately not set. en_GB dictionary ordering changes `ls` and
+`sort` output against the byte ordering the aliases and scripts here were
+written on; only `LANG` is set, so collation follows it and can be pinned back
+to `C` in the same two files if that ever bites.
+
+Both hosts need this, and an already-correct host exits before its first
+`pkexec`, so the script is silent on every apply after the first. Local sessions
+pick the change up on next login. A remote Herdr session needs
+`herdr server stop` and a re-attach, because the running server holds the old
+environment.
+
 ## SSH and the 1Password agent
 
 Ported from the previous multi-OS dotfiles, minus its macOS/Windows/WSL

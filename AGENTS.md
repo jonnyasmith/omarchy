@@ -155,6 +155,11 @@ See `README.md` for the per-item detail. Summary:
   `ufw allow in on tailscale0` rule, which is the only thing making port 22
   reachable. Reachability is deliberately ufw's job, not `ListenAddress`; read
   the README before changing that.
+- `run_after_locale.sh` — sets `LANG=en_GB.UTF-8` in both `/etc/locale.conf`
+  (systemd, hence local sessions) and `/etc/environment` (pam_env, hence ssh
+  and `herdr --remote` panes), generating `en_GB.UTF-8` first because Omarchy's
+  installer ships a UK keymap on a US locale. Only `LANG`; read the README
+  before adding `LC_COLLATE`.
 - `.chezmoitemplates/omarchy/fingerprint.md` + its `run_after_` script — the
   canonical fingerprint topic guide, reinstalled into the package-owned agent
   skill tree after every `omarchy update` wipes it.
