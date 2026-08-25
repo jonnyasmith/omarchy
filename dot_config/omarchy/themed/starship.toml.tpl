@@ -93,7 +93,13 @@ Gentoo = " "
 HardenedBSD = "󰞌 "
 Illumos = "󰈸 "
 Kali = " "
-Linux = " "
+# Deliberately the Arch glyph, not the Tux one. Omarchy 4 ships its own
+# /etc/os-release with `ID=omarchy`, and starship's os_info 3.15.0 matches `ID`
+# against a fixed list of literals -- `ID_LIKE=arch` and /etc/arch-release are
+# never consulted -- so an unrecognised ID lands on `Type::Linux`. `[os.symbols]`
+# is keyed by that enum, so there is no omarchy key to set. Trade-off: any
+# genuinely unidentified Linux would now claim to be Arch.
+Linux = " "
 Mabox = " "
 Macos = " "
 Manjaro = " "

@@ -219,6 +219,19 @@ full terminal width for the command regardless of how long the path and branch
 get. `add_newline` is left at its `true` default: that is the blank line
 *above* the prompt.
 
+`[os.symbols] Linux` is set to the *Arch* glyph, which looks like a mistake and
+is not. Omarchy 4 installs its own `/etc/os-release` with `ID=omarchy`, and
+starship's `os` module hands detection to `os_info` 3.15.0, which matches `ID`
+against a fixed list of literals (`os_info/src/linux/file_release.rs:92-172`).
+`ID_LIKE=arch` is never read — the string does not appear anywhere in either
+source tree — and neither is `/etc/arch-release`. An unrecognised `ID` therefore
+falls through to `Type::Linux`, not `Type::Unknown`, and `[os.symbols]` is keyed
+by that enum (`src/configs/os.rs:15`), so there is no `omarchy` key to set.
+Overriding `Linux` is the only lever. The cost is that a genuinely unidentified
+Linux would also show the Arch glyph, which does not arise on one machine.
+Bind-mounting an `ID=arch` os-release over the real one makes the same binary
+and config emit `U+F303` unchanged, which is how the cause was confirmed.
+
 `$git_state` is what makes a rebase visible — without it a detached mid-rebase
 HEAD renders like any other branch. `$git_metrics` needs `disabled = false`
 and is the one module here that can be slow, since it diffs the working tree
