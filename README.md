@@ -855,6 +855,49 @@ because this firmware refuses the SMM set-fan call. Fan speed follows package
 temperature and nothing else; the fans idle near 4600 RPM whenever the package
 stays above roughly 65 C.
 
+## Inbound SSH over Tailscale
+
+`run_after_sshd-tailnet.sh` makes this box reachable by `ssh` from the tailnet
+and from nowhere else. Arch ships `openssh` installed but `sshd.service`
+disabled, and Tailscale's netfilter rules (`NetfilterMode=2`) sit *in front* of
+ufw, so tailnet packets reached a closed port 22 and got a RST — `ssh minisforum`
+failed with `Connection refused` rather than timing out.
+
+Three pieces, only one of which chezmoi can own as a file:
+
+| Where | What |
+|---|---|
+| `private_dot_ssh/private_authorized_keys` | the personal 1Password-agent Ed25519 public key, the only thing that can log in |
+| `/etc/ssh/sshd_config.d/10-tailnet-only.conf` | `AuthenticationMethods publickey`, no passwords, no root |
+| `ufw allow in on tailscale0 to any port 22` | the only rule that admits port 22 at all |
+
+`10-` beats Arch's `99-archlinux.conf`: sshd is first-value-wins per keyword and
+reads the drop-in directory in lexical order.
+
+Reachability is a firewall rule, not `ListenAddress`. Binding to `100.91.240.96`
+would make sshd depend on tailscaled having claimed the address before it
+starts, and a boot-order race that leaves sshd dead on a headless box is worse
+than a packet filter. ufw's default policy is deny (incoming), so the single
+`tailscale0` rule is what admits the tailnet while the LAN and the WAN see a
+drop.
+
+No private key and no password is involved: the authorized key is the same
+1Password agent identity described in the next section, which every machine in
+this tailnet already carries, so logging in here is a biometric approval on the
+machine you are sitting at.
+
+### Why not Tailscale SSH
+
+`tailscale set --ssh` is the shorter answer — tailnet-identity auth, no
+`authorized_keys`, nothing listening on the host at all — and the tailnet's ACL
+already permits it (`tailscale debug netmap` shows an `SSHPolicy` accepting the
+other two nodes for any user). It was tried first and rejected for one reason:
+it cannot be verified from the box being configured. Tailscale does not
+intercept traffic to a node's own tailnet address, so a self-dial is refused
+however healthy the server is, and neither peer had a way in to loop back
+through. A login path that cannot be tested before you rely on it is not worth
+the saved `authorized_keys` line.
+
 ## SSH and the 1Password agent
 
 Ported from the previous multi-OS dotfiles, minus its macOS/Windows/WSL

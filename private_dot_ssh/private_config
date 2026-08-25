@@ -40,6 +40,16 @@ Match originalhost ssh.dev.azure.com,vs-ssh.visualstudio.com
   PubkeyAcceptedAlgorithms +ssh-rsa
   HostkeyAlgorithms +ssh-rsa
 
+# Tailnet machines, reached by MagicDNS short name. Both run the key-only sshd
+# from run_after_sshd-tailnet.sh, which authorizes this one key — pinning it
+# keeps the two work keys from being offered to a personal box, and turns a
+# missing authorization into "Permission denied (publickey)" rather than the
+# MaxAuthTries failure three offered keys produce.
+Match originalhost minisforum,dell-xps
+  User jonny
+  IdentitiesOnly yes
+  IdentityFile ~/.ssh/1password/github-personal.pub
+
 Host *
   # 1Password's Linux agent socket. Nothing listens here until the SSH agent is
   # enabled in 1Password → Settings → Developer; a stale path and an unset one

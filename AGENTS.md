@@ -144,6 +144,12 @@ See `README.md` for the per-item detail. Summary:
   config with one 1Password-agent identity per host, the `private_*.pub` stubs
   it pins (0600 is load-bearing under OpenSSH 10), and the agent's own item
   list. No private key touches disk; the agent toggle is GUI-only.
+  `private_authorized_keys` is the inbound half: the personal Ed25519 public key,
+  the only credential that can ssh *into* either machine.
+- `run_after_sshd-tailnet.sh` — enables `sshd` with a key-only drop-in and one
+  `ufw allow in on tailscale0` rule, which is the only thing making port 22
+  reachable. Reachability is deliberately ufw's job, not `ListenAddress`; read
+  the README before changing that.
 - `.chezmoitemplates/omarchy/fingerprint.md` + its `run_after_` script — the
   canonical fingerprint topic guide, reinstalled into the package-owned agent
   skill tree after every `omarchy update` wipes it.
