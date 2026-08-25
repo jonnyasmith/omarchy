@@ -818,6 +818,51 @@ Portainer's first-run admin account is created at <http://localhost:9000> and
 the window times out if it is left sitting; `docker restart portainer` reopens
 it.
 
+## Desktops never sleep
+
+`run_after_never-sleep.sh` masks `sleep.target`, `suspend.target`,
+`hibernate.target`, `hybrid-sleep.target` and `suspend-then-hibernate.target`,
+and sets Omarchy's `suspend-off` toggle so the *Suspend* row leaves the system
+menu. It is gated on the DMI chassis type, and the list is an allowlist of
+desktop-class values (3, 4, 5, 6, 7, 15, 16, 17, 23, 35) rather than a denylist
+of laptop ones: `minisforum` reports 35, Mini PC, and every other machine —
+the XPS 15, which is a Notebook, or anything whose firmware reports something
+unexpected — exits 0 before the first `pkexec` and keeps suspending normally.
+
+The point is remote access. A suspended box looks exactly like a dead one from
+the office: sshd is enabled, tailscaled is enabled, and the packets go nowhere.
+There is no way back in, either — this host is on Wi-Fi (`enp195s0`/`enp196s0`
+are unpopulated), and Wake-on-LAN needs a magic packet originating on the same
+L2 segment, which is the one thing being elsewhere rules out.
+
+Nothing here suppresses an idle-suspend, because Omarchy has none: the
+`omarchy.idle` service only runs the screensaver and the lock (see *Stay awake*),
+and logind's `IdleAction` is left at its `ignore` default. Locking is orthogonal
+and stays on — sshd does not care whether the session is locked. What the script
+closes is the manual path: the menu row, `systemctl suspend` from a shell, the
+power key, and any future Omarchy default that starts setting `IdleAction`.
+
+Masking is the enforcement layer and the toggle is only cosmetic. logind reaches
+every sleep path by queueing a job for `sleep.target`, so a masked unit fails
+the job — `Unit suspend.target is masked` — whatever the config above it says.
+The toggle exists so the UI stops offering an action that would now error.
+
+Two things this cannot do, both firmware:
+
+- **Power loss.** Set *Restore on AC Power Loss* (Minisforum BIOS: Chipset →
+  State After G3) to *Power On*, or a five-second cut leaves the machine off
+  until someone presses the button.
+- **Never a clean poweroff.** `omarchy system shutdown` still works and is still
+  unrecoverable remotely. Reboot is fine; the machine comes back.
+
+Verify after an apply:
+
+```bash
+systemctl is-enabled sleep.target suspend.target hibernate.target \
+  hybrid-sleep.target suspend-then-hibernate.target   # five × masked
+systemctl suspend                                     # must fail, masked
+```
+
 ## Thermal and GPU power (XPS 15 9500)
 
 `run_after_xps15-thermal.sh` fixes two places where Omarchy's defaults meet

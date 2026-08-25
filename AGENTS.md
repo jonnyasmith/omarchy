@@ -28,6 +28,7 @@ Two hosts share this source dir. Everything host-specific self-gates, so one
 | Distro layer | [Omarchy](https://omarchy.org/) 4.0.0-1 | Omarchy 4.0.1 |
 | Fingerprint | Goodix `27c6:533c`, libfprint TOD driver | none — both fingerprint scripts exit 0 |
 | Thermal/GPU | `run_after_xps15-thermal.sh` applies | DMI gate fails, no-op |
+| Sleep | suspends normally (lid close) | `run_after_never-sleep.sh` masks every sleep target |
 
 Common to both: Hyprland configured in **Lua** under `~/.config/hypr/`, the
 Omarchy shell (Quickshell) driven by `~/.config/omarchy/shell.json`, and Arch.
@@ -175,6 +176,12 @@ See `README.md` for the per-item detail. Summary:
 - `run_after_portainer.sh` — writes `/opt/portainer/docker-compose.yml` and runs
   the Portainer container on http://localhost:9000. Gated on `docker info`, so
   it defers rather than fails before the `docker` group re-login.
+- `run_after_never-sleep.sh` — masks the five sleep targets and drops *Suspend*
+  from the system menu, so this box stays reachable over the tailnet from
+  elsewhere. Gated on an allowlist of desktop DMI chassis types, so the XPS —
+  and any machine whose firmware reports something unexpected — still suspends
+  on lid close. Does not cover power loss (BIOS *Restore on AC Power Loss*) or
+  a deliberate shutdown; read the README before editing.
 - `run_after_xps15-thermal.sh` — caps RAPL package power to what this chassis
   can cool (PL1 45 W / 28 s, PL2 60 W, both domains, re-applied after resume)
   and enables PCIe runtime D3 plus the nvidia sleep units for the dGPU. Gated
