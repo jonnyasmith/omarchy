@@ -70,14 +70,20 @@ Match originalhost minisforum,dell-xps,macmini
   # are absolute because RemoteForward does not expand ~ on either side.
   RemoteForward /home/jonny/.ssh/1password-forwarded.sock /home/jonny/.1password/agent.sock
 
-# Use a forwarded agent when one is present. This is what makes the block above
-# do anything: without it the `Host *` default below wins on first-obtained-value
-# and the far end keeps asking its own local 1Password.
+# Use a forwarded agent, but only on the far side of an ssh connection. This is
+# what makes the block above do anything: without it the `Host *` default below
+# wins on first-obtained-value and the far end keeps asking its own local
+# 1Password.
 #
-# Symmetric across both machines, which share this file: on whichever box is
-# being sat at, nothing forwarded a socket to that path, the test fails, and the
-# `Host *` default applies as before.
-Match exec "test -S /home/jonny/.ssh/1password-forwarded.sock"
+# $SSH_CONNECTION is the discriminator, and existence of the socket is not
+# enough on its own. Both machines share this file and forward to the same path,
+# so a session in the other direction -- or a socket sshd left behind -- puts
+# that file on the machine being sat at too, and a bare `test -S` then sends
+# *local* git to the other box's 1Password, where the approval prompt is once
+# again on a screen nobody is looking at. sshd sets $SSH_CONNECTION only for the
+# remote end, and a Herdr pane inherits it from the server, so this matches
+# exactly the sessions the forward was made for.
+Match exec "test -n \"$SSH_CONNECTION\" && test -S /home/jonny/.ssh/1password-forwarded.sock"
   IdentityAgent /home/jonny/.ssh/1password-forwarded.sock
 
 Host *
