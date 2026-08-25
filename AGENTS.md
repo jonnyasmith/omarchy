@@ -90,7 +90,11 @@ See `README.md` for the per-item detail. Summary:
 - `dot_bashrc` + `dot_config/blesh/init.sh` + `dot_config/bash/` — ble.sh (the
   zsh-autosuggestions equivalent), its settings, its fzf/zoxide integrations,
   and the aliases ported from the old zsh setup. Requires `yay -S blesh-git`;
-  every reference is guarded.
+  every reference is guarded. `dot_config/bash/*.sh` is glob-sourced, so a new
+  file there needs no wiring. One of them, `denv.sh`, injects project secrets
+  from 1Password with `op run` instead of a copy-pasted `.env`; it keys off the
+  git remote so worktrees agree, and its per-repo templates live unmanaged in
+  `~/.config/dev-env/` because an `op://` reference names the client (rule 7).
 - `dot_config/tmux/tmux.conf` — Omarchy's tmux config plus vim-direction pane
   focus keys (`Ctrl+Shift+h/j/k/l`) and the `extended-keys always` / `extkeys`
   settings those keys need to reach tmux at all. A whole-file copy, because

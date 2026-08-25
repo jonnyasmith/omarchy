@@ -121,6 +121,83 @@ The one-letter git aliases these call (`git a`, `git s`, `git l`, `git d`, …)
 came over into `dot_config/git/config` in the same pass. Neither half is much
 use alone.
 
+## Project secrets (`denv`)
+
+`dot_config/bash/denv.sh` replaces the copy-a-`.env`-file-into-place habit with
+one wrapper around [`op run`](https://developer.1password.com/docs/cli/reference/commands/run):
+
+```
+denv pnpm dev              # stage dev (the default)
+denv -s prod pnpm build    # stage prod
+denv -k                    # which key this repo resolves to
+denv -l                    # list templates, marking this repo's
+denv -e                    # edit this repo's template
+denv-check [stage]         # resolve every reference in every template
+```
+
+`op run` resolves `op://` references and hands the values to a subprocess only,
+masked in stdout/stderr, so no secret is written to disk and there is nothing to
+git-ignore. `~/.config/bash/*.sh` is glob-sourced by `dot_bashrc`, so the file
+needs no wiring.
+
+### The templates live outside the repo
+
+In `$DENV_DIR` (default `~/.config/dev-env/`), **not** in the project and not in
+this repo:
+
+| File | Role |
+|---|---|
+| `_shared.tpl` | loaded first for every repo (optional) |
+| `<key>.tpl` | the repo's own (required) |
+| `<key>.<stage>.tpl` | stage-specific overrides (optional) |
+
+`--env-file` may be repeated and the last file wins, so the three layers
+compose. A template holds pointers, never values:
+
+```
+PUBLIC_API_URL=op://Dev/myapp-$APP_ENV/api_url
+```
+
+`op` substitutes `$APP_ENV` from the environment, which is why one template
+covers every stage and switching stage is an argument rather than a file copy.
+`.env.development` / `.env.production` stop existing.
+
+Two reasons they stay out of the project: the teams on those repos do not use
+1Password, so a committed template is noise they cannot act on; and an `op://`
+reference names a vault and an item, which on a work repo means it names the
+client — the rule 7 problem, one layer up. The generic wrapper is safe to keep
+here because it hard-codes no repo, vault, or item. The map is
+`~/.config/dev-env/`, which is deliberately unmanaged. Back its bodies up as a
+1Password Secure Note, not as a file in this repo.
+
+### Why the key is not the directory name
+
+A git worktree has a different basename from its main checkout, and these repos
+are worked in worktrees, so a directory-keyed lookup misses. `_denv_key` reads
+`remote.origin.url` and takes the last path segment, percent-decoded for Azure
+DevOps. That is stable across every worktree and clone of one repo. Falling
+back, in order: the main worktree's directory via `git rev-parse
+--git-common-dir`, then `$PWD`, so a scratch directory outside git still
+resolves.
+
+The consequence is that identity follows the repo, not the folder: `~/dev/dotfiles`
+keys as `omarchy`, because that is what its origin is called. `denv -k` exists
+so a missing template is a two-second diagnosis instead of a mystery.
+
+### The one trap
+
+A leftover `.env` in the project root is still loaded by Vite's dotenv (and most
+other loaders) and beats anything injected into the environment. `denv` warns
+when it sees one. Delete the file rather than silencing the warning.
+
+### Prerequisite
+
+`op` must be signed in, which on this machine means *1Password → Settings →
+Developer → Integrate with 1Password CLI* — then the unlock is biometric and no
+token is stored. It is not enabled yet, so `op whoami` fails; `denv` detects
+that on a non-zero exit and says so rather than letting a dev server boot with
+unresolved variables.
+
 ## Herdr
 
 `dot_config/herdr/config.toml` configures [herdr](https://herdr.dev), the
