@@ -206,8 +206,9 @@ terminal` or a new window picks changes up.
 
 ## Starship prompt
 
-`dot_config/starship.toml` is the prompt Omarchy's bash rc initialises. `format`
-is a single explicit string — directory, git branch, git state, git status,
+`dot_config/omarchy/themed/starship.toml.tpl` is the prompt Omarchy's bash rc
+initialises, rendered per theme (see below). `format` is a single explicit
+string — directory, git branch, git state, git status,
 exit status — so every module Starship enables by default (language versions,
 cloud contexts, `$cmd_duration`, …) is excluded by omission rather than disabled
 one by one. The `$schema` key is inert at runtime; it buys completion and
@@ -224,7 +225,7 @@ already says *that* a command failed, `$status` adds *which* code.
 
 `[directory] read_only` is set to a nerd-font glyph because the default is the
 emoji `🔒` and `repo_root_format` references `$read_only`. Every other module
-overridden here is monochrome cyan; the exceptions are deliberate warnings —
+overridden here is monochrome `accent`; the exceptions are deliberate warnings —
 `read_only` keeps its red default, as does `battery` below its 10% threshold.
 
 `right_format` (sudo, jobs, battery, time) only exists thanks to ble.sh. Bash
@@ -238,6 +239,33 @@ rendered anything but `$jobs`.
 
 `command_timeout = 200` caps per-module work; the git modules are the only ones
 that can hit it, on a large repo.
+
+### Why the whole file is a theme template
+
+Starship follows `omarchy theme set` the way Neovim and omp do, but it cannot
+use their shape. Both of those keep a repo-managed base config that *loads* a
+generated theme file — `require` for `theme.lua`, a themes directory for
+`omarchy-system.json`. Starship has no `include`, and as of 1.26.0 a
+colon-separated `STARSHIP_CONFIG` list is treated as one filename and falls back
+to stock defaults (the multi-file PR is unmerged). So there is no overlay: the
+whole config has to be the rendered artifact.
+
+Hence `dot_config/omarchy/themed/starship.toml.tpl`, and **no
+`~/.config/starship.toml` at all**. `omarchy-theme-set-templates` substitutes
+the `colors.toml` tokens into every user `.tpl` and writes the result to
+`~/.local/state/omarchy/current/theme/starship.toml`; `dot_bashrc` exports
+`STARSHIP_CONFIG` pointing there, before Omarchy's rc runs `starship init bash`.
+
+No hook and no reload step, unlike the omp bridge: starship is a fresh process
+per prompt, so the next prompt reads the new file. The export is guarded with
+`[[ -r ]]` because a theme without a `colors.toml` is never rendered, and
+`STARSHIP_CONFIG` aimed at a missing file gives the stock prompt with no error.
+
+The colours were the ANSI name `cyan` before this, which already tracked the
+theme through `foot.ini`'s palette include. Templating buys `accent` — a theme's
+chosen highlight, which is not always its ANSI cyan: Dracula's is `#8be9fd`,
+Gruvbox's is `#7daea3`. `style` under `[directory]` has to be written out
+explicitly, since a template cannot inherit starship's `cyan bold` default.
 
 ## mise global tools
 

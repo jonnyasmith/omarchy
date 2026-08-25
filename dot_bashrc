@@ -13,6 +13,16 @@
 # ~/.config/blesh/init.sh, which ble.sh sources by itself.
 [[ -r /usr/share/blesh/ble.sh ]] && source /usr/share/blesh/ble.sh --noattach
 
+# Starship reads its config from the current Omarchy theme, not
+# ~/.config/starship.toml, which does not exist. The file is rendered from
+# ~/.config/omarchy/themed/starship.toml.tpl by every `omarchy theme set`.
+# Must be exported before Omarchy's rc runs `starship init bash`. Guarded
+# because a theme with no colors.toml is never rendered, and pointing
+# STARSHIP_CONFIG at a missing file silently yields the stock prompt.
+_starship_config="$HOME/.local/state/omarchy/current/theme/starship.toml"
+[[ -r $_starship_config ]] && export STARSHIP_CONFIG="$_starship_config"
+unset _starship_config
+
 # All the default Omarchy aliases and functions
 # (don't mess with these directly, just overwrite them here!)
 source "$OMARCHY_PATH/default/bash/rc"

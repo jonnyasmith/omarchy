@@ -99,6 +99,13 @@ See `README.md` for the per-item detail. Summary:
 - `dot_config/foot/foot.ini` — Omarchy's foot config plus `alpha=0.9` in
   `[colors-dark]` (foot 1.27 deprecated plain `[colors]`). Also a whole-file
   copy, for the same reason as `tmux.conf`.
+- `dot_config/omarchy/themed/starship.toml.tpl` — the starship prompt. There is
+  no `~/.config/starship.toml`: starship has no `include` and ignores a
+  multi-path `STARSHIP_CONFIG` (1.26.0), so unlike the nvim and omp bridges the
+  whole config must be the theme-rendered artifact. `omarchy theme set` renders
+  it to `~/.local/state/omarchy/current/theme/starship.toml` and `dot_bashrc`
+  exports `STARSHIP_CONFIG` at that path. No hook: starship re-reads the file
+  every prompt.
 - `dot_config/nvim/` — the whole Neovim config: the AstroNvim v6 template, most
   of it still the shipped `if true then return {} end` stubs, plus the Omarchy
   theme bridge (`lua/plugins/omarchy.lua`, `all-themes.lua`, the `symlink_`
