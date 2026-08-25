@@ -109,10 +109,58 @@ ACTION=="unbind", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{class}=="0x0302
 EOF
   install_if_changed "$tmp/nvidia-pm.rules" /etc/udev/rules.d/80-nvidia-pm.rules || true
 
-  # Fine-grained RTD3. Separate file from Omarchy's /etc/modprobe.d/nvidia.conf,
-  # which the installer rewrites wholesale.
+  # Fine-grained RTD3. Without this the driver reports "Runtime D3 status:
+  # Disabled by default" on this platform, whatever power/control says.
+  # Separate file from Omarchy's /etc/modprobe.d/nvidia.conf, which the
+  # installer rewrites wholesale.
   printf 'options nvidia NVreg_DynamicPowerManagement=0x02\n' >"$tmp/nvidia-pm.conf"
   install_if_changed "$tmp/nvidia-pm.conf" /etc/modprobe.d/nvidia-power-management.conf || true
+
+  # The nvidia modules load from the boot image here (MODULES+= in
+  # /etc/mkinitcpio.conf.d/nvidia.conf), so the parameter only reaches them if
+  # the modconf hook baked this file in. This machine boots a UKI
+  # (/boot/EFI/Linux/*.efi, built by kernel-install, with no mkinitcpio
+  # presets), so `mkinitcpio -P` would be a no-op — it must be rebuilt through
+  # kernel-install. Ask the image itself rather than tracking whether the file
+  # just changed: an interrupted rebuild or a later kernel upgrade both leave
+  # the answer in /boot.
+  #
+  # A layout with no recognisable image is reported, never silently accepted.
+  rebuild=$(pkexec bash -c '
+      command -v lsinitcpio >/dev/null 2>&1 || { echo unknown; exit 0; }
+      found=false
+      for img in /boot/EFI/Linux/*.efi /boot/initramfs-linux*.img; do
+        [[ -e $img ]] || continue
+        case $img in *-fallback.img) continue ;; esac
+        found=true
+        if ! lsinitcpio "$img" 2>/dev/null | grep -q "modprobe.d/nvidia-power-management.conf"; then
+          echo stale
+          exit 0
+        fi
+      done
+      $found && echo current || echo unknown')
+
+  case $rebuild in
+    stale)
+      announce
+      echo "Rebuilding the boot image so the NVIDIA power parameter reaches early KMS..."
+      # limine-mkinitcpio builds the UKI and updates /boot/limine.conf in one
+      # step. `kernel-install add-all` reaches it too, by way of a
+      # 50-mkinitcpio.install that first fails loudly over the empty
+      # /etc/mkinitcpio.d, so it is only the fallback.
+      if command -v limine-mkinitcpio >/dev/null 2>&1; then
+        pkexec limine-mkinitcpio
+      elif [[ -d /boot/EFI/Linux ]] && command -v kernel-install >/dev/null 2>&1; then
+        pkexec kernel-install add-all
+      else
+        pkexec mkinitcpio -P
+      fi
+      ;;
+    unknown)
+      echo "warning: cannot inspect the boot image; check that" \
+           "NVreg_DynamicPowerManagement reaches the nvidia module" >&2
+      ;;
+  esac
 
   # Required by PreserveVideoMemoryAllocations=1, which the driver already has.
   for unit in nvidia-suspend.service nvidia-resume.service nvidia-hibernate.service; do

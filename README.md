@@ -817,14 +817,27 @@ stopped shipping) and asks for fine-grained RTD3 explicitly with
 `NVreg_DynamicPowerManagement=0x02` in its own `/etc/modprobe.d` file, kept
 separate from the `nvidia.conf` Omarchy's installer rewrites wholesale.
 
+That file only matters if it reaches the module, and the nvidia modules load
+from the boot image, not from `/etc`. This machine boots a UKI —
+`/boot/EFI/Linux/omarchy_linux.efi`, built by `kernel-install` with an empty
+`/etc/mkinitcpio.d`, so `mkinitcpio -P` is a no-op here — so the script asks
+`lsinitcpio` whether the image already carries
+`etc/modprobe.d/nvidia-power-management.conf` and rebuilds through
+`limine-mkinitcpio` when it does not. Checking the image rather than the file
+means an interrupted rebuild or a later kernel upgrade is self-correcting, and
+a boot layout it cannot inspect prints a warning instead of passing silently.
+
 It also enables `nvidia-suspend`, `nvidia-resume` and `nvidia-hibernate`.
 `PreserveVideoMemoryAllocations` is already 1 on this system, and without those
 units nothing saves or restores that memory across a suspend.
 
-Verify after a reboot:
+`/proc/driver/nvidia/gpus/0000:01:00.0/power` reports `Runtime D3 status:
+Disabled by default` until that parameter arrives. After a reboot it must read
+`Enabled (fine-grained)`:
 
 ```bash
 systemctl is-active cpu-power-cap.service
+grep 'Runtime D3' /proc/driver/nvidia/gpus/0000:01:00.0/power
 grep -H . /sys/bus/pci/devices/0000:01:00.0/power/{control,runtime_status,runtime_suspended_time}
 ```
 
