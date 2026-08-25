@@ -13,71 +13,107 @@
 # up. There is no ~/.config/starship.toml -- do not add one back, it would be
 # dead weight that STARSHIP_CONFIG overrides.
 #
-# Every colour here was the ANSI name `cyan` before, which already tracked the
-# terminal palette through foot.ini's theme include. The point of templating is
-# `accent`: a theme's chosen highlight is not always its ANSI cyan. The prompt
-# stays single-hue on purpose -- this is a port of the old config, not a
-# redesign. The other colors.toml keys and the `mix` function are available if
-# it ever wants shades outside the 16 ANSI slots.
+# Only the two colours this layout sets explicitly need tokens. Every other
+# module keeps its stock ANSI-name style, which already follows the theme
+# through foot.ini's palette include. The `accent` key and the `mix` function
+# are there if the prompt ever wants a hue outside the 16 ANSI slots.
 "$schema" = 'https://starship.rs/config-schema.json'
 
-add_newline = true
-command_timeout = 200
-format = "[$directory$git_branch$git_state$git_status]($style)$status$line_break$character"
-right_format = "$sudo$jobs$battery$time"
+format = """
+$os\
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_commit\
+$git_state\
+$git_status\
+$git_metrics\
+$line_break\
+$status\
+$character"""
 
-[character]
-error_symbol = "[✗](bold {{ accent }})"
-success_symbol = "[❯](bold {{ accent }})"
+right_format = """
+$sudo\
+$jobs\
+$battery\
+$time\
+"""
 
 [directory]
-truncation_length = 2
-truncation_symbol = "…/"
-# Explicit because templating cannot inherit starship's "cyan bold" default.
-style = "bold {{ accent }}"
-repo_root_style = "bold {{ accent }}"
-repo_root_format = "[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) "
 read_only = " 󰌾"
+truncation_length = 3
+truncation_symbol = "…/"
+truncate_to_repo = false
 
 [git_branch]
-format = "[$branch]($style) "
-style = "italic {{ accent }}"
+symbol = " "
 
-[git_state]
-style = "bold {{ accent }}"
+[git_metrics]
+disabled = false
 
 [git_status]
-format     = '[$all_status]($style)'
-style      = "{{ accent }}"
-ahead      = "⇡${count} "
-diverged   = "⇕⇡${ahead_count}⇣${behind_count} "
-behind     = "⇣${count} "
-conflicted = " "
-up_to_date = " "
-untracked  = "? "
-modified   = " "
-stashed    = ""
-staged     = ""
-renamed    = ""
-deleted    = ""
+ahead = '⇡${count}'
+diverged = '⇕⇡${ahead_count}⇣${behind_count}'
+behind = '⇣${count}'
+modified = '*'
+conflicted = '!'
 
-[status]
+[username]
+format = '[$user@]($style)'
+style_user = 'bold dimmed {{ green }}'
+style_root = 'bold {{ yellow }}'
+show_always = true
+
+[hostname]
+ssh_only = false
+format = '[$hostname ]($style)'
+style = 'bold dimmed {{ green }}'
+
+[os]
 disabled = false
-format = "[$status]($style) "
-style = "bold {{ accent }}"
 
-[sudo]
-disabled = false
-format = "[$symbol]($style)"
-symbol = "sudo "
-style = "{{ accent }}"
-
-[jobs]
-format = "[$symbol$number]($style) "
-style = "{{ accent }}"
-
-[time]
-disabled = false
-format = "[$time]($style)"
-time_format = "%H:%M"
-style = "{{ accent }}"
+[os.symbols]
+Alpaquita = " "
+Alpine = " "
+AlmaLinux = " "
+Amazon = " "
+Android = " "
+Arch = " "
+Artix = " "
+CentOS = " "
+Debian = " "
+DragonFly = " "
+Emscripten = " "
+EndeavourOS = " "
+Fedora = " "
+FreeBSD = " "
+Garuda = "󰛓 "
+Gentoo = " "
+HardenedBSD = "󰞌 "
+Illumos = "󰈸 "
+Kali = " "
+Linux = " "
+Mabox = " "
+Macos = " "
+Manjaro = " "
+Mariner = " "
+MidnightBSD = " "
+Mint = " "
+NetBSD = " "
+NixOS = " "
+OpenBSD = "󰈺 "
+openSUSE = " "
+OracleLinux = "󰌷 "
+Pop = " "
+Raspbian = " "
+Redhat = " "
+RedHatEnterprise = " "
+RockyLinux = " "
+Redox = "󰀘 "
+Solus = "󰠳 "
+SUSE = " "
+Ubuntu = " "
+Unknown = " "
+Void = " "
+Windows = "󰍲 "

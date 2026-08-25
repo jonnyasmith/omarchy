@@ -208,37 +208,44 @@ terminal` or a new window picks changes up.
 
 `dot_config/omarchy/themed/starship.toml.tpl` is the prompt Omarchy's bash rc
 initialises, rendered per theme (see below). `format` is a single explicit
-string — directory, git branch, git state, git status,
-exit status — so every module Starship enables by default (language versions,
-cloud contexts, `$cmd_duration`, …) is excluded by omission rather than disabled
-one by one. The `$schema` key is inert at runtime; it buys completion and
-validation in any editor with a TOML language server.
+string — os, user@host, directory, git branch, git commit, git state, git
+status, git metrics — so every module Starship enables by default (language
+versions, cloud contexts, `$cmd_duration`, …) is excluded by omission rather
+than disabled one by one. The `$schema` key is inert at runtime; it buys
+completion and validation in any editor with a TOML language server.
 
 `$line_break` before `$character` puts the `❯` on its own line, leaving the
 full terminal width for the command regardless of how long the path and branch
-get. `add_newline = true` is separate: it is the blank line *above* the prompt.
+get. `add_newline` is left at its `true` default: that is the blank line
+*above* the prompt.
 
 `$git_state` is what makes a rebase visible — without it a detached mid-rebase
-HEAD renders like any other branch. `$status` sits at the end of the top line
-rather than next to `❯`, so the cursor line stays clean; the `✗` character
-already says *that* a command failed, `$status` adds *which* code.
+HEAD renders like any other branch. `$git_metrics` needs `disabled = false`
+and is the one module here that can be slow, since it diffs the working tree
+for the `+n`/`-n` line counts.
+
+`$status` sits at the end of the top line rather than next to `❯`, so the
+cursor line stays clean. It renders nothing as configured: the `status` module
+is disabled by default and no `[status]` section enables it. That is how the
+layout has always been — add `[status] disabled = false` if the exit code is
+wanted, because `✗` says only *that* a command failed, never *which* code.
 
 `[directory] read_only` is set to a nerd-font glyph because the default is the
-emoji `🔒` and `repo_root_format` references `$read_only`. Every other module
-overridden here is monochrome `accent`; the exceptions are deliberate warnings —
-`read_only` keeps its red default, as does `battery` below its 10% threshold.
+emoji `🔒`. `truncate_to_repo = false` is what keeps the path absolute-ish
+inside a repo instead of collapsing to the repo root, with
+`truncation_length = 3` and `…/` doing the shortening instead.
 
 `right_format` (sudo, jobs, battery, time) only exists thanks to ble.sh. Bash
 has no RPROMPT, and `starship init bash` emits the right prompt solely inside
 `if [[ ${BLE_ATTACHED-} ]]`, as `bleopt prompt_rps1`. On a machine without the
 ble.sh package it silently disappears. That same init prefixes the value with
 one newline per newline in `PS1`, so with `$line_break` the right prompt lands
-on the `❯` row. `sudo` and `time` need explicit `disabled = false`; both are
-off by default, which is why the equivalent block in the old zsh config never
-rendered anything but `$jobs`.
+on the `❯` row. `sudo` and `time` are off by default and no section enables
+them here either, so `$jobs` and `$battery` are all that render — the same
+behaviour the old zsh config had.
 
-`command_timeout = 200` caps per-module work; the git modules are the only ones
-that can hit it, on a large repo.
+No `command_timeout`, so the 500 ms default applies. The git modules are the
+only ones that can reach it, on a large repo.
 
 ### Why the whole file is a theme template
 
@@ -261,11 +268,16 @@ per prompt, so the next prompt reads the new file. The export is guarded with
 `[[ -r ]]` because a theme without a `colors.toml` is never rendered, and
 `STARSHIP_CONFIG` aimed at a missing file gives the stock prompt with no error.
 
-The colours were the ANSI name `cyan` before this, which already tracked the
-theme through `foot.ini`'s palette include. Templating buys `accent` — a theme's
-chosen highlight, which is not always its ANSI cyan: Dracula's is `#8be9fd`,
-Gruvbox's is `#7daea3`. `style` under `[directory]` has to be written out
-explicitly, since a template cannot inherit starship's `cyan bold` default.
+Only `[username]` and `[hostname]` set a colour explicitly, so those are the
+only tokens in the template: `bold dimmed {{ green }}` and `bold {{ yellow }}`
+for root. Every other module keeps its stock ANSI-name style, which already
+follows the theme through `foot.ini`'s palette include — templating those would
+add tokens without changing a pixel. `accent` and the `mix` function are
+available for a hue outside the 16 ANSI slots, which this layout does not use.
+
+One stock quirk, unchanged by the port: starship's style parser drops `bold`
+when `dimmed` follows it, so `user@host` renders as SGR `2` alone. It did the
+same with the ANSI name.
 
 ## mise global tools
 
