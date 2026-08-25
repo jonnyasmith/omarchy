@@ -898,6 +898,42 @@ however healthy the server is, and neither peer had a way in to loop back
 through. A login path that cannot be tested before you rely on it is not worth
 the saved `authorized_keys` line.
 
+### macmini
+
+The third tailnet node is a Mac mini, and nothing in this repo configures it.
+`~/.ssh/config` pins the same personal Ed25519 identity for it as for the two
+Linux boxes, so outbound `ssh macmini` offers one key instead of three, but the
+server half is macOS Remote Login and has to be done on the box by hand:
+
+1. **System Settings → General → Sharing → Remote Login: on**, with *Allow
+   access for* set to the one account rather than *All users*.
+2. Authorize the key, once, from a Linux box:
+   `ssh-copy-id -i ~/.ssh/1password/github-personal.pub macmini`. It is the
+   public stub, so this copies a public key and nothing else; the password
+   prompt is the last time one is needed.
+3. Turn password auth off afterwards, in
+   `/etc/ssh/sshd_config.d/10-tailnet-only.conf` on the Mac —
+   `PasswordAuthentication no`, `KbdInteractiveAuthentication no`,
+   `PermitRootLogin no`. Do this only after step 2 is verified, or the only way
+   back in is the keyboard.
+
+   The `10-` prefix matters for the same first-value-wins reason it does on
+   Arch, against a different file: macOS ships its own `100-macos.conf` there,
+   and `10-` sorts ahead of `100-` because `-` precedes `0`. A higher number
+   would be read second and silently ignored.
+
+   No restart is needed. macOS sshd is launchd socket-activated and spawned per
+   connection, so the next login reads the new config; the session you are
+   sitting in is unaffected, which is what makes it safe to verify from a second
+   terminal before closing the first.
+
+What cannot be reproduced from the Linux side is the ufw half. macOS has no
+`ufw`, and its sshd is launchd socket-activated, so `ListenAddress` is ignored
+and port 22 is offered on every interface including the LAN. Scoping it to the
+tailnet needs a `pf` anchor or the Application Firewall, so until that is done
+`macmini` is key-only but not tailnet-only — a weaker posture than the two Linux
+hosts, and the reason this is documented rather than scripted.
+
 ## SSH and the 1Password agent
 
 Ported from the previous multi-OS dotfiles, minus its macOS/Windows/WSL

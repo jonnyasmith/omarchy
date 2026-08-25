@@ -40,12 +40,16 @@ Match originalhost ssh.dev.azure.com,vs-ssh.visualstudio.com
   PubkeyAcceptedAlgorithms +ssh-rsa
   HostkeyAlgorithms +ssh-rsa
 
-# Tailnet machines, reached by MagicDNS short name. Both run the key-only sshd
-# from run_after_sshd-tailnet.sh, which authorizes this one key — pinning it
-# keeps the two work keys from being offered to a personal box, and turns a
-# missing authorization into "Permission denied (publickey)" rather than the
-# MaxAuthTries failure three offered keys produce.
-Match originalhost minisforum,dell-xps
+# Tailnet machines, reached by MagicDNS short name. All three authorize this one
+# key — pinning it keeps the two work keys from being offered to a personal box,
+# and turns a missing authorization into "Permission denied (publickey)" rather
+# than the MaxAuthTries failure three offered keys produce.
+#
+# The two Linux boxes get their sshd from run_after_sshd-tailnet.sh. macmini is
+# macOS Remote Login instead, so nothing in this repo hardens it: its sshd is
+# launchd-socket-activated, which ignores ListenAddress, and it has no ufw. See
+# README for what has to be done on the box by hand.
+Match originalhost minisforum,dell-xps,macmini
   User jonny
   IdentitiesOnly yes
   IdentityFile ~/.ssh/1password/github-personal.pub
