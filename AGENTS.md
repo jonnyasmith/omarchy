@@ -150,11 +150,13 @@ See `README.md` for the per-item detail. Summary:
   it pins (0600 is load-bearing under OpenSSH 10), and the agent's own item
   list. No private key touches disk; the agent toggle is GUI-only.
   `private_authorized_keys` is the inbound half: the personal Ed25519 public key,
-  the only credential that can ssh *into* either machine. The tailnet block also
-  `RemoteForward`s this machine's agent socket to a fixed path on the far end, so
-  git in a `herdr --remote` pane prompts here rather than on a screen nobody is
-  looking at; the `Match exec` block above `Host *` is what makes the far end use
-  it. Read the README before touching either.
+  the only credential that can ssh *into* either machine. `herdr --remote` uses
+  the `<host>-herdr` alias, the only connection that `RemoteForward`s this
+  machine's agent socket to a fixed path on the far end, so git in a pane prompts
+  here rather than on a screen nobody is looking at. Plain `ssh minisforum`
+  deliberately does not forward — it would steal that path and leave a dead
+  socket. The `Match exec` block above `Host *` is what makes the far end use it,
+  and both halves of its test matter. Read the README before touching any of it.
 - `run_after_sshd-tailnet.sh` — enables `sshd` with a key-only drop-in and one
   `ufw allow in on tailscale0` rule, which is the only thing making port 22
   reachable. Reachability is deliberately ufw's job, not `ListenAddress`; read

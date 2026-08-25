@@ -1073,10 +1073,19 @@ geography, not credentials: the pane's ssh read `Host * IdentityAgent
 the approval dialog opened on that box's physical Wayland session — a screen
 nobody was looking at — and ssh waited on it forever.
 
-The tailnet block therefore forwards the agent of the machine being sat at:
+Attach through the `-herdr` alias, and that connection — only that connection —
+forwards the agent of the machine being sat at:
+
+```bash
+herdr --remote minisforum-herdr
+```
 
 ```
-RemoteForward /home/jonny/.ssh/1password-forwarded.sock /home/jonny/.1password/agent.sock
+Host minisforum-herdr
+  HostName minisforum
+
+Match originalhost *-herdr
+  RemoteForward /home/jonny/.ssh/1password-forwarded.sock /home/jonny/.1password/agent.sock
 ```
 
 `RemoteForward` and not `ForwardAgent`, because of how Herdr is built.
@@ -1086,20 +1095,33 @@ its panes inherit the environment it started with — so by the second attach th
 variable is either absent or pointing at a closed connection's socket. A
 constant path has no environment to go stale.
 
-Three pieces have to agree, and each one is inert without the others:
+The alias exists because a constant path has the opposite hazard. Every
+connection carrying that option rebinds the same socket, and sshd does not unlink
+it on close, so a one-shot `ssh minisforum some-command` would take the path from
+a live session and leave a dead socket behind on exit — after which git in every
+pane fails with `Error connecting to agent: Connection refused`. Keeping the
+forward on the attach alias means only the long-lived connection that needs it
+ever binds it, and plain `ssh minisforum` is harmless.
+
+Four pieces have to agree, and each one is inert without the others:
 
 | Where | What | Why |
 |---|---|---|
-| `~/.ssh/config` tailnet block | `RemoteForward <fixed path> ~/.1password/agent.sock` | sends this machine's agent over |
-| `~/.ssh/config`, above `Host *` | `Match exec "test -S <fixed path>"` → `IdentityAgent <fixed path>` | makes the far end prefer it |
+| `~/.ssh/config`, `Host <host>-herdr` | `HostName <host>` | an alias only the attach uses |
+| `~/.ssh/config`, `Match originalhost *-herdr` | `RemoteForward <fixed path> ~/.1password/agent.sock` | sends this machine's agent over |
+| `~/.ssh/config`, above `Host *` | `Match exec "test -n \"$SSH_CONNECTION\" && test -S <fixed path>"` → `IdentityAgent <fixed path>` | makes the far end prefer it |
 | remote `sshd` | `StreamLocalBindUnlink yes` | lets attach #2 rebind the path |
 
 That `Match exec` is what makes the forward do anything at all: `ssh_config` is
 first-value-wins, so without a match ahead of `Host *` the far end goes back to
-asking its own local 1Password. Both machines share this file and the block is
-symmetric — on whichever box is being sat at, nothing forwarded a socket to that
-path, `test -S` fails, and `Host *` applies exactly as before. Neither side needs
-`ForwardAgent`, and no environment variable is involved anywhere.
+asking its own local 1Password. Both halves of the test are load-bearing. Both
+machines share this file and forward to the same path, so existence of the socket
+says nothing about direction: a session the other way, or a socket sshd left
+behind, puts that file on the machine being sat at too, and `test -S` alone then
+sends *local* git to the other box's 1Password — the original bug, mirrored.
+`$SSH_CONNECTION` is set by sshd only on the remote end, and a Herdr pane
+inherits it from the server, so together they match exactly the sessions the
+forward was made for. Neither side needs `ForwardAgent`.
 
 `StreamLocalBindUnlink yes` (set by `run_after_sshd-tailnet.sh`) is not optional.
 sshd does not remove a forwarded socket when the connection closes, so without it

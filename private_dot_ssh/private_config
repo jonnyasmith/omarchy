@@ -49,25 +49,42 @@ Match originalhost ssh.dev.azure.com,vs-ssh.visualstudio.com
 # macOS Remote Login instead, so nothing in this repo hardens it: its sshd is
 # launchd-socket-activated, which ignores ListenAddress, and it has no ufw. See
 # README for what has to be done on the box by hand.
-Match originalhost minisforum,dell-xps,macmini
+Match originalhost minisforum,dell-xps,macmini,minisforum-herdr,dell-xps-herdr
   User jonny
   IdentitiesOnly yes
   IdentityFile ~/.ssh/1password/github-personal.pub
-  # Hand this machine's 1Password agent to the far end at a *fixed* path, so a
-  # git push from a `herdr --remote` pane raises its approval dialog here, on
-  # the screen being looked at, instead of on the remote box's physical Wayland
-  # session where it waits forever and git just hangs.
-  #
-  # RemoteForward, not ForwardAgent, because of how Herdr is built: ForwardAgent
-  # publishes a random per-connection path in $SSH_AUTH_SOCK, and the Herdr
-  # server outlives any single ssh connection while its panes inherit the
-  # environment it started with -- so that variable is absent or points at a
-  # closed connection's socket by the second attach. A constant path has no
-  # environment to go stale.
-  #
-  # The remote sshd needs StreamLocalBindUnlink yes to replace the socket left
-  # by the previous connection; run_after_sshd-tailnet.sh sets it. Both paths
-  # are absolute because RemoteForward does not expand ~ on either side.
+
+# Attach aliases for `herdr --remote minisforum-herdr`. Same machines, reached
+# the same way; the only thing the alias adds is the agent forward below.
+Host minisforum-herdr
+  HostName minisforum
+Host dell-xps-herdr
+  HostName dell-xps
+
+# Hand this machine's 1Password agent to the far end at a fixed path, so a git
+# push from a `herdr --remote` pane raises its approval dialog here, on the
+# screen being looked at, instead of on the remote box's physical Wayland
+# session where it waits forever and git just hangs.
+#
+# RemoteForward, not ForwardAgent, because of how Herdr is built: ForwardAgent
+# publishes a random per-connection path in $SSH_AUTH_SOCK, and the Herdr server
+# outlives any single ssh connection while its panes inherit the environment it
+# started with -- so that variable is absent or points at a closed connection's
+# socket by the second attach. A constant path has no environment to go stale.
+#
+# A constant path has the opposite failure, though, and it is why this lives on
+# a dedicated alias instead of on the plain host names: every connection carrying
+# this option rebinds the same socket, and sshd does not unlink it on close. A
+# one-shot `ssh minisforum some-command` would therefore steal the path from a
+# live Herdr session and leave a dead socket behind on exit, breaking git in
+# every pane with "Error connecting to agent: Connection refused". Confining the
+# forward to the attach alias means only the long-lived connection that needs it
+# ever binds it, and `ssh minisforum` stays harmless.
+#
+# The remote sshd needs StreamLocalBindUnlink yes to replace the socket left by
+# the previous attach; run_after_sshd-tailnet.sh sets it. Both paths are absolute
+# because RemoteForward does not expand ~ on either side.
+Match originalhost *-herdr
   RemoteForward /home/jonny/.ssh/1password-forwarded.sock /home/jonny/.1password/agent.sock
 
 # Use a forwarded agent, but only on the far side of an ssh connection. This is
