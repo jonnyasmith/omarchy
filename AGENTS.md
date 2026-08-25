@@ -150,11 +150,16 @@ See `README.md` for the per-item detail. Summary:
   it pins (0600 is load-bearing under OpenSSH 10), and the agent's own item
   list. No private key touches disk; the agent toggle is GUI-only.
   `private_authorized_keys` is the inbound half: the personal Ed25519 public key,
-  the only credential that can ssh *into* either machine.
+  the only credential that can ssh *into* either machine. The tailnet block also
+  `RemoteForward`s this machine's agent socket to a fixed path on the far end, so
+  git in a `herdr --remote` pane prompts here rather than on a screen nobody is
+  looking at; the `Match exec` block above `Host *` is what makes the far end use
+  it. Read the README before touching either.
 - `run_after_sshd-tailnet.sh` — enables `sshd` with a key-only drop-in and one
   `ufw allow in on tailscale0` rule, which is the only thing making port 22
   reachable. Reachability is deliberately ufw's job, not `ListenAddress`; read
-  the README before changing that.
+  the README before changing that. Also sets `StreamLocalBindUnlink yes`, which
+  the agent forward below needs to survive a re-attach.
 - `run_after_locale.sh` — sets `LANG=en_GB.UTF-8` in both `/etc/locale.conf`
   (systemd, hence local sessions) and `/etc/environment` (pam_env, hence ssh
   and `herdr --remote` panes), generating `en_GB.UTF-8` first because Omarchy's

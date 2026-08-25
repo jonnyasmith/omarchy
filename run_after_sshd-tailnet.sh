@@ -46,6 +46,14 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin no
 AuthenticationMethods publickey
+
+# Replace the Unix socket a previous connection left behind instead of failing
+# the forward. ~/.ssh/config sends this machine's 1Password agent to the far end
+# at a constant path (see the tailnet block there), and without this the second
+# attach dies with "remote port forwarding failed for listen path" because the
+# first one's socket is still on disk. Only affects sockets this user's own
+# sessions bound.
+StreamLocalBindUnlink yes
 EOF
 
 if ! cmp -s "$tmp/drop-in" "$drop_in"; then

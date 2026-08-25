@@ -1065,6 +1065,66 @@ apply. It resolves one source path per file rather than joining a directory: on
 the per-file `private_` prefix, and writing `$dir/$name.pub` creates a second
 0644 source entry per stub, which chezmoi then reports as `inconsistent state`.
 
+### Agent forwarding for `herdr --remote`
+
+Git inside a `herdr --remote` pane used to hang with no output. The cause was
+geography, not credentials: the pane's ssh read `Host * IdentityAgent
+~/.1password/agent.sock` from *the remote machine's* copy of this same file, so
+the approval dialog opened on that box's physical Wayland session — a screen
+nobody was looking at — and ssh waited on it forever.
+
+The tailnet block therefore forwards the agent of the machine being sat at:
+
+```
+RemoteForward /home/jonny/.ssh/1password-forwarded.sock /home/jonny/.1password/agent.sock
+```
+
+`RemoteForward` and not `ForwardAgent`, because of how Herdr is built.
+`ForwardAgent` advertises a random per-connection socket path in
+`$SSH_AUTH_SOCK`, while the Herdr server outlives any single ssh connection and
+its panes inherit the environment it started with — so by the second attach that
+variable is either absent or pointing at a closed connection's socket. A
+constant path has no environment to go stale.
+
+Three pieces have to agree, and each one is inert without the others:
+
+| Where | What | Why |
+|---|---|---|
+| `~/.ssh/config` tailnet block | `RemoteForward <fixed path> ~/.1password/agent.sock` | sends this machine's agent over |
+| `~/.ssh/config`, above `Host *` | `Match exec "test -S <fixed path>"` → `IdentityAgent <fixed path>` | makes the far end prefer it |
+| remote `sshd` | `StreamLocalBindUnlink yes` | lets attach #2 rebind the path |
+
+That `Match exec` is what makes the forward do anything at all: `ssh_config` is
+first-value-wins, so without a match ahead of `Host *` the far end goes back to
+asking its own local 1Password. Both machines share this file and the block is
+symmetric — on whichever box is being sat at, nothing forwarded a socket to that
+path, `test -S` fails, and `Host *` applies exactly as before. Neither side needs
+`ForwardAgent`, and no environment variable is involved anywhere.
+
+`StreamLocalBindUnlink yes` (set by `run_after_sshd-tailnet.sh`) is not optional.
+sshd does not remove a forwarded socket when the connection closes, so without it
+the next attach reports
+
+```
+Warning: remote port forwarding failed for listen path /home/jonny/.ssh/1password-forwarded.sock
+```
+
+and every git operation in the pane then fails with `Error connecting to agent:
+Connection refused` — the file is still there, but nothing is listening on it.
+
+Verify from a pane on the remote box:
+
+```bash
+SSH_AUTH_SOCK=~/.ssh/1password-forwarded.sock ssh-add -l   # lists the local machine's keys
+ssh -T git@github.com                                      # greets you as jonnyasmith
+```
+
+The exposure this accepts: while attached, anything running as this user — or as
+root — on the remote machine can send signing requests to 1Password here. Every
+request still needs approval on this side, so the worst case is an unexpected
+prompt to decline, not silent use of a key. That trade is only acceptable because
+the far end is a personal tailnet host.
+
 ### Which key a repo gets
 
 ssh sees a hostname, never a repo, so the host in the remote URL is what selects
