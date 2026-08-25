@@ -1131,8 +1131,27 @@ the next attach reports
 Warning: remote port forwarding failed for listen path /home/jonny/.ssh/1password-forwarded.sock
 ```
 
-and every git operation in the pane then fails with `Error connecting to agent:
-Connection refused` — the file is still there, but nothing is listening on it.
+and every git operation in the pane then fails, because the file is still there
+with nothing listening on it. What that looks like depends on who asks:
+`ssh-add -l` says `Error connecting to agent: Connection refused`, while git and
+ssh give up on the dead agent, fall back to the `IdentityFile`, and report
+
+```
+Load key "/home/jonny/.ssh/1password/github-personal.pub": invalid format
+git@github.com: Permission denied (publickey).
+```
+
+which names the stub rather than the agent and reads like a key problem. It is
+not. `IdentitiesOnly yes` leaves that public-key stub as the only candidate once
+the agent is gone, and a stub is not a usable key on its own.
+
+The same message appears, for the same reason, whenever no attach is live at all:
+the socket file outlives the connection that bound it, so the path exists, the
+`Match exec` test passes, and the agent behind it is gone. Fixed by attaching —
+`herdr --remote minisforum-herdr` rebinds the path. This is only reachable when
+nobody is attached, which is also when nobody is there to care; a fast, ugly
+error beats the alternative of falling through to the far end's own 1Password and
+hanging on a dialog on an unattended screen.
 
 Verify from a pane on the remote box:
 
