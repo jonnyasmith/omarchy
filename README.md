@@ -1113,6 +1113,36 @@ first. It still shows up as `MM .ssh/config`; take the tracked file back with
 `chezmoi apply --force ~/.ssh/config`. Expect this again after a 1Password
 reinstall or a toggle off/on.
 
+A running 1Password is the other precondition, and losing it looks like a key
+problem rather than a missing app. `~/.1password/agent.sock` is left behind when
+the app goes away, so the path still exists with nothing listening, and
+`IdentitiesOnly yes` leaves the `.pub` stub as the only candidate:
+
+```
+Load key "/home/jonny/.ssh/1password/github-personal.pub": invalid format
+git@github.com: Permission denied (publickey).
+```
+
+Identical message, identical cause, and the same one the forwarded socket
+produces below — a dead agent, not a bad stub. `ssh-add -l` is the quick
+discriminator: `Error connecting to agent: Connection refused` means the socket
+is stale. Fixed by starting the app again (`/opt/1Password/1password --silent`,
+which is what the XDG autostart entry runs at login).
+
+What makes this worth naming is that it happens without anyone quitting
+1Password. It watches its own binary and exits when it moves, so a package
+upgrade of `1password` — including one pulled in by `omarchy update` — kills a
+running app mid-session:
+
+```
+WARN [1P:app/op-app/src/app.rs:1064] Application binary and/or it's directory
+was moved or replaced, exiting.
+```
+
+in `~/.config/1Password/logs/1Password_r*.log`, timestamped to the `upgraded
+1password` line in `/var/log/pacman.log`. Nothing restarts it, so the next
+`git push` is where you find out.
+
 `~/.ssh/1password/refresh` regenerates the stubs from `ssh-add -L` **into this
 source directory**, not straight into `~` — a rotated key is a change to the
 desired state, so it belongs in a commit. Review with `chezmoi diff`, then
