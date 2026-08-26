@@ -124,7 +124,9 @@ See `README.md` for the per-item detail. Summary:
   of it still the shipped `if true then return {} end` stubs, plus the Omarchy
   theme bridge (`lua/plugins/omarchy.lua`, `all-themes.lua`, the `symlink_`
   entry pointing `theme.lua` at the current Omarchy theme, and
-  `plugin/after/transparency.lua`). Omarchy's own starter installs to
+  `plugin/after/transparency.lua`), and `lua/remote_clipboard.lua`, loaded from
+  `polish.lua`, which routes yanks over OSC 52 in tmux/ssh/herdr sessions so a
+  copy lands on the machine being typed on. Omarchy's own starter installs to
   `/etc/skel/`, so this replaces it outright and `omarchy update` cannot clash.
   `dot_config/omarchy/themes/gruvbox/neovim.lua` overrides one theme's spec to
   match its `colors.toml`. The lock file is `create_lazy-lock.json` on purpose:

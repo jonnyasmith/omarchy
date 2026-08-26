@@ -564,11 +564,11 @@ costs nothing. What is tracked here is the [AstroNvim v6
 template](https://github.com/AstroNvim/template) plus a bridge that keeps
 Omarchy's theme switching working against AstroNvim instead of LazyVim.
 
-Most of the tree is the template as it shipped. `lua/community.lua`,
-`lua/polish.lua`, and `lua/plugins/{user,astrocore,astroui,astrolsp,mason,none-ls,treesitter}.lua`
+Most of the tree is the template as it shipped. `lua/community.lua` and
+`lua/plugins/{user,astrocore,astroui,astrolsp,mason,none-ls,treesitter}.lua`
 all still open with `if true then return {} end`, and `dot_config/nvim/README.md`
 is still the template's own readme. They are tracked verbatim so the commented
-examples stay to hand; none of them affect a running nvim. Four files do the
+examples stay to hand; none of them affect a running nvim. Six files do the
 work:
 
 - `lua/plugins/symlink_theme.lua` is a chezmoi `symlink_` entry, so the live
@@ -591,6 +591,17 @@ work:
 - `plugin/after/transparency.lua` strips `bg` from a list of highlight groups so
   the terminal's own translucency shows through. Every theme apply re-sources
   it, since a colorscheme resets those groups.
+- `lua/polish.lua` is the template's last-in hook, activated only to call
+  `require("remote_clipboard").setup()`.
+- `lua/remote_clipboard.lua` installs a `vim.g.clipboard` provider when the
+  session's yanks may have to reach another machine — `$TMUX`, `$SSH_TTY` /
+  `$SSH_CONNECTION`, or a `herdr` ancestor process. Copies go to the local
+  Wayland clipboard when there is a display *and* out as OSC 52, which the
+  multiplexer or terminal turns into a clipboard write on the machine being
+  typed on. Paste reads `wl-paste` when a display exists, otherwise replays
+  what this session last copied: herdr and most terminals refuse OSC 52
+  *reads*, and asking costs a ten-second block and a warning. A plain local
+  session installs nothing, leaving neovim's own wl-copy detection in charge.
 
 A colorscheme is normally a name, but some themes (`azure-glow` here) put a
 function on `opts.colorscheme` that sets highlight groups directly. LazyVim
