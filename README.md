@@ -419,7 +419,7 @@ whole restore path on a new machine.
 
 | Tool | Pin |
 |---|---|
-| `azure-cli`, `claude`, `cmake`, `codex`, `gh`, `go`, `oh-my-pi`, `uv`, `zig` | `latest` |
+| `azure-cli`, `claude`, `cmake`, `codex`, `gh`, `go`, `hunk`, `oh-my-pi`, `opencode`, `uv`, `zig` | `latest` |
 | `bun` | `1` |
 | `dotnet` | `10`, `8` |
 | `node` | `26`, `24`, `22` |
@@ -429,11 +429,14 @@ whole restore path on a new machine.
 Runtimes are pinned to a major and listed newest-first — mise installs every
 version in the list and treats the first as the default, so a project
 `mise.toml` asking for an older major finds it already on disk. The CLIs float,
-since they are self-contained binaries that are only useful current. `oh-my-pi`
-is a registry alias for the `github:can1357/oh-my-pi` backend, which installs
-from release assets rather than from a version-managed tool source; the short
-name is the one to use, since spelling the backend out declares the same tool
-under a second name and mise installs it twice.
+since they are self-contained binaries that are only useful current. Two of them
+are registry aliases for a backend that installs from release assets rather than
+from a version-managed tool source: `oh-my-pi` for `github:can1357/oh-my-pi`,
+and `hunk` for `aqua:modem-dev/hunk`. The short name is always the one to use.
+Spelling the backend out declares the same tool under a second name, and mise
+installs it twice — `mise ls hunk` listed `aqua:modem-dev/hunk` and `hunk` side
+by side until the long form was dropped and the orphaned install uninstalled.
+`mise registry <name>` prints the backend a short name resolves to.
 
 `[settings] minimum_release_age = "7d"` is the counterweight to all that
 floating: a `latest` resolved the day it ships is a supply-chain window, so mise
