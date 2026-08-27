@@ -19,7 +19,7 @@
 {{- $workOrgs := "" -}}
 {{- $workEmail := "" -}}
 {{- if $work -}}
-{{-   $workOrgs = promptStringOnce . "workOrgs" "Work GitHub org(s), comma-separated" "" -}}
+{{-   $workOrgs = promptStringOnce . "workOrgs" "Work GitHub remote owner(s) — orgs and/or user accounts, comma-separated" "" -}}
 {{-   $workEmail = promptStringOnce . "workEmail" "Work git email" "" -}}
 {{- end -}}
 
@@ -39,6 +39,10 @@ sourceDir = "~/dev/dotfiles"
 
 [data]
     work = {{ $work }}
-    # Comma-separated GitHub org slugs, exactly as they appear in clone URLs.
+    # Comma-separated GitHub remote owners, exactly as they appear in clone URLs
+    # — whatever sits between `github.com:` and the repo name. A user account
+    # owning a work repo needs its own entry; an org slug does not cover it. An
+    # owner left out gets the personal key and the personal commit email, and
+    # GitHub reports its private repos as "not found".
     workOrgs = {{ $workOrgs | quote }}
     workEmail = {{ $workEmail | quote }}

@@ -23,9 +23,18 @@ Match originalhost github.com
   IdentitiesOnly yes
   IdentityFile ~/.ssh/1password/github-personal.pub
 
-# Reachable but inert until git rewrites work remotes to this alias; the
-# previous dotfiles did that from a generated ~/.config/git/config.local, which
-# is not ported. Kept so the key stays pinned if that routing comes back.
+# Nothing reaches this alias by hand: ssh sees a hostname, never a repo, so the
+# `insteadOf` rewrites generated into ~/.config/git/config.local are the only
+# thing that routes a work remote here. That file is rendered from
+# dot_config/git/config.local.tmpl, one rewrite per entry in `workOrgs`.
+#
+# An owner missing from `workOrgs` therefore gets no rewrite, silently keeps the
+# personal key, and GitHub reports the private repo as "not found" rather than
+# as a permission error. The matching `includeIf hasconfig` blocks miss too, so
+# commits are authored with the personal address. Add the owner to `workOrgs`
+# and re-apply; do NOT hand-edit a remote to this alias, which fixes the key but
+# not the email. `workOrgs` takes owners exactly as they appear in a clone URL,
+# so a personal-account owner needs its own entry — an org slug does not cover it.
 Match originalhost github-work
   HostName github.com
   User git

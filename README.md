@@ -1280,9 +1280,25 @@ the work account. Two pieces do it, both generated into
   wildcard-magic directly after a slash, so `ORG**` matches nothing while
   failing silently.
 
-A second org needs nothing in `~/.ssh` — one alias serves every org on the same
-account. Add it to `workOrgs` and re-run `chezmoi init`; `config.local.tmpl`
-ranges over the list.
+`workOrgs` is a list of **remote owners**, not specifically of organisations —
+whatever sits between `github.com:` and the repo name. A work repo owned by a
+personal-style account rather than by the org needs its own entry; the org slug
+does not cover it. Adding one needs nothing in `~/.ssh`: one alias serves every
+owner on the same account, and `config.local.tmpl` ranges over the list.
+
+Because `promptStringOnce` only asks when the key is absent, re-running
+`chezmoi init` will **not** revise an existing answer. Edit `workOrgs` in
+`~/.config/chezmoi/chezmoi.toml` and `chezmoi apply`.
+
+A missing owner fails in a way that points at the wrong thing. The bottom row of
+the table takes over: no rewrite, so ssh offers the personal key, and GitHub
+answers `ERROR: Repository not found` — it masks "no access" as "no such repo",
+so the URL looks wrong when the identity is. The `includeIf` blocks miss on the
+same prefix, so commits are authored with the personal address and nothing warns.
+Confirm with `ssh -T git@github.com` (greets you as the personal account),
+`git ls-remote --get-url origin` (shows whether the rewrite fired) and
+`git whoami`. Fix `workOrgs`; do not hand-edit the remote to `github-work`,
+which corrects the key and leaves the email wrong.
 
 For what a URL cannot express — a personal fork of a work repo, a client repo
 outside the org — `git work` and `git personal` set `user.email` in the current

@@ -134,9 +134,12 @@ See `README.md` for the per-item detail. Summary:
   be allowed to overwrite it — do not drop the `create_` prefix.
 - `dot_config/git/config` + `config.local.tmpl` + `config.work.tmpl` — git
   config, the one-letter aliases the bash `g*` aliases call, and the
-  work-account routing: `insteadOf` rewrites a work org's `github.com` remotes
-  onto the `github-work` ssh alias, and `includeIf hasconfig` swaps in the work
-  email. Renaming that alias means editing `~/.ssh/config` too.
+  work-account routing: `insteadOf` rewrites the `github.com` remotes of every
+  owner listed in `workOrgs` onto the `github-work` ssh alias, and `includeIf
+  hasconfig` swaps in the work email. `workOrgs` holds owners, orgs or user
+  accounts alike; an owner missing from it silently gets the personal key and
+  the personal commit email. Renaming that alias means editing `~/.ssh/config`
+  too.
 - `dot_omp/private_agent/` + `dot_config/omarchy/themed/omp.json.tpl` +
   `dot_config/omarchy/hooks/theme-set.d/` +
   `run_onchange_after_omarchy-themed.sh.tmpl` —
