@@ -17,6 +17,24 @@ included by templates, never applied on its own.
 
 `origin` is <https://github.com/jonnyasmith/omarchy.git> — public, hence rule 7.
 
+## Docs
+
+`README.md` is the per-item reference: one section per managed file, why it is
+shaped that way, and the traps. `docs/` holds the background that is about the
+system rather than about a file here. Read the matching one before designing a
+change; do not re-derive it.
+
+- [`docs/omarchy-extension-surfaces.md`](docs/omarchy-extension-surfaces.md) —
+  every place user functionality can be added to this desktop (menu rows,
+  launchers, keybindings, bar modules, shell plugins, indicators, hooks, themed
+  templates, notifications, shell IPC), ordered cheapest first, plus the two
+  surfaces whose shipped comments overstate what is extensible. **Read this
+  before adding any new desktop functionality** — picking a rung too low is the
+  expensive mistake, and it is the one this repo has already made once.
+
+`docs/` is in `.chezmoiignore`, like `AGENTS.md` and `README.md`; without that
+entry chezmoi would create `~/docs`.
+
 ## The machines
 
 Two hosts share this source dir. Everything host-specific self-gates, so one
@@ -41,7 +59,9 @@ so overrides are additive and only need the keys they change.
 
 1. **Read `skill://omarchy` before touching any desktop config** —
    `~/.config/hypr/`, `~/.config/omarchy/`, terminal configs, themes, hooks.
-   It documents the `omarchy` CLI and the per-area topic guides.
+   It documents the `omarchy` CLI and the per-area topic guides. When the change
+   *adds* functionality rather than adjusting existing config, pick the surface
+   from `docs/omarchy-extension-surfaces.md` first and say which rung and why.
 2. **Never write to `/usr/share/omarchy/`** by hand. It is package-owned and
    `omarchy update` wipes it. Reading it is encouraged — that is where the
    defaults you are overriding live. The one thing that *does* install there,

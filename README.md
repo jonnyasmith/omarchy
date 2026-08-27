@@ -22,11 +22,26 @@ every apply. Pass `-x none` to see them again.
 
 Because this repo *is* the source directory, a file dropped in its root is read
 as a source entry and applied to `~`. `.chezmoiignore` lists the ones that are
-repo-local: `AGENTS.md`, `README.md`, and `mise.toml`. That last entry is
+repo-local: `AGENTS.md`, `README.md`, `docs/`, and `mise.toml`. That last entry is
 pre-emptive — `mise use <tool>` without `-g` writes a project-local `mise.toml`
 into the current directory, and run from here that file becomes a source entry
 targeting `~/mise.toml`. Use `mise use -g` to reach the global set in
 `dot_config/mise/config.toml`.
+
+## Docs
+
+Everything below this section is per-item: one heading per managed file, why it
+is shaped that way, and what breaks. Background that is about the system rather
+than about a file here lives in `docs/`:
+
+- [`docs/omarchy-extension-surfaces.md`](docs/omarchy-extension-surfaces.md) —
+  every place functionality can be added to an Omarchy desktop, ordered cheapest
+  first: desktop launcher, menu row, keybinding, command bar module, hook,
+  themed template, QML bar module, full shell plugin. Also the two surfaces
+  whose shipped comments promise more than the code delivers, and a map of which
+  rungs this repo is standing on.
+
+`docs/` is listed in `.chezmoiignore` for the same reason `README.md` is.
 
 ## New Machine
 

@@ -3,4 +3,5 @@
 # otherwise read as a source entry and applied to ~.
 AGENTS.md
 README.md
+docs/
 mise.toml
