@@ -30,7 +30,7 @@ here=$(dirname "$self")
 # not had a theme applied yet, in which case fzf's own defaults and a plain
 # ANSI dim are what is left.
 palette="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current/theme/fzf.env"
-FZF_THEME_OPTS="" FZF_THEME_ACCENT="" FZF_THEME_MUTED=""
+FZF_THEME_OPTS="" FZF_THEME_ACCENT="" FZF_THEME_DIM=""
 # shellcheck source=/dev/null
 [[ -r $palette ]] && source "$palette"
 
@@ -46,15 +46,24 @@ ansi_fg() {
 # Dim is the fallback rather than nothing: it is the one attribute that follows
 # whatever palette the terminal itself is using.
 port_colour=$(ansi_fg "$FZF_THEME_ACCENT") || port_colour=$'\033[2m'
+detail_colour=$(ansi_fg "$FZF_THEME_DIM") || detail_colour=$'\033[2m'
 
+# All three columns are visible and therefore all three are searchable: the
+# project directory, the port, and the command line. The command line is the
+# reason -- two checkouts of the same repo are both `acme-web`, and the only
+# thing that tells them apart is the path in the argv. It used to be a preview
+# pane, which showed it for one row at a time and kept it out of the query.
+#
 # Padded here rather than left to fzf's --with-nth, which would print the raw
-# tabs and leave the port column jumping about as label lengths change. The
-# port is repeated as a hidden field because the visible one carries ANSI
-# escapes and a truncation, so it is no longer safe to parse.
+# tabs and leave the columns jumping about as label lengths change. Only the
+# label is truncated: fzf matches the whole string and lets the terminal cut
+# the display, so a long argv stays searchable without widening every row. The
+# port is repeated as a hidden trailing field because the visible one carries
+# ANSI escapes, so it is no longer safe to parse.
 rows() {
   "$here/ports.sh" "$1" "$2" |
-    awk -F'\t' -v c="$port_colour" -v r=$'\033[0m' \
-      '{ printf "%-22.22s %s:%s%s\t%s\t%s\n", $2, c, $1, r, $1, $3 }'
+    awk -F'\t' -v c="$port_colour" -v d="$detail_colour" -v r=$'\033[0m' \
+      '{ printf "%-22.22s %s:%-5s%s %s%s%s\t%s\n", $2, c, $1, r, d, $3, r, $1 }'
 }
 
 if [[ ${1:-} == --rows ]]; then
@@ -113,8 +122,6 @@ selection=$(
     --pointer='▌' \
     --prompt='dev port  ' \
     --header='enter open · alt-enter browser tab · ctrl-r rescan · esc quit' \
-    --preview='printf "%s\n" {3}' \
-    --preview-window='down,3,wrap,border-top' \
     --bind="ctrl-r:reload($(printf '%q' "$self") --rows $min $max)" \
     --expect=alt-enter \
     $FZF_THEME_OPTS

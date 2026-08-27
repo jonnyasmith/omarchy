@@ -889,7 +889,7 @@ type to the row, `enter`, and the terminal it ran in closes behind it.
 
 | Key | Action |
 |---|---|
-| type | fuzzy filter by project name |
+| type | fuzzy filter across all three columns — project, port, command line |
 | `enter` | open as its own window (`omarchy-launch-or-focus-webapp`) |
 | `alt-enter` | open as an ordinary browser tab (`omarchy-launch-browser`) |
 | `ctrl-r` | rescan |
@@ -899,7 +899,7 @@ It is deliberately not a second implementation: `ports.sh` still owns the scan,
 and the picker is an fzf front end on the same TSV the widget draws. `fzf` and
 `jq` are both in Omarchy's own package set, so there is nothing to install.
 
-Seven things that are the way they are for a reason:
+Eight things that are the way they are for a reason:
 
 - **`--app-id=TUI.float` is not cosmetic.** `omarchy-launch-tui` derives the
   app-id from the command name when you do not pass one, and Omarchy floats a
@@ -932,13 +932,19 @@ Seven things that are the way they are for a reason:
   launch, so the prompt, pointer, selected row, header and the accent on each
   `:port` follow `omarchy theme set`. Without it the picker is fzf's stock
   16-colour default in the middle of a themed desktop, because Omarchy themes
-  every TUI it ships and fzf is not one of them. Two details: `bg`,
-  `preview-bg` and `gutter` are `-1` (inherit) rather than the theme
-  background, or the pane would be painted opaque and `foot`'s `alpha=0.9`
-  would be lost; and the per-`:port` accent is a truecolor escape built in the
-  script, because fzf colours whole lines and only the fuzzy-match highlight is
-  finer than that. No `theme-set.d` hook: nothing needs copying or signalling
-  when the consumer reads the state dir itself.
+  every TUI it ships and fzf is not one of them. Three details. `bg` and
+  `gutter` are `-1` (inherit) rather than the theme background, or the pane
+  would be painted opaque and `foot`'s `alpha=0.9` would be lost. The
+  per-`:port` accent and the dim on the command column are truecolor escapes
+  built in the script, because fzf colours whole lines and only the fuzzy-match
+  highlight is finer than that. And anything that is *text to be read* —
+  the header legend, the counter, the command column — is
+  `mix background foreground 60%`, never the theme's `muted`: each theme
+  defines `muted` as furniture, and under Nord it is `#4c566a`, which through a
+  0.9-alpha terminal made the keybinding legend invisible. A fixed mix is
+  legible in every theme because it is defined against that theme's own
+  background. No `theme-set.d` hook: nothing needs copying or signalling when
+  the consumer reads the state dir itself.
 - **The empty list is a notification, not a line of stdout.** A terminal that
   opens and closes faster than you can read it is no way to deliver "nothing is
   listening", so on a desktop that message goes to
@@ -950,13 +956,23 @@ Seven things that are the way they are for a reason:
   `shell/plugins/bar/BarModel.js` strips only `id` — so both surfaces resolve
   the same values, and configuring one configures both. Explicit arguments
   (`ports-tui.sh 1024 65535`) still win, for use by hand.
+- **All three columns are visible, so all three are searchable.** Project
+  directory, `:port`, and the process's own command line, one match space:
+  typing `http.server 3222` crosses the argv and the port and narrows 3 rows to
+  1. The command line used to be a preview pane at the foot of the window,
+  which showed it for the selected row only and kept it out of the query — the
+  wrong trade, because the argv is the one thing that separates two checkouts
+  of the same repo, both of which label themselves `acme-web`. Only the project
+  column is truncated (22 chars); fzf matches the whole string and lets the
+  terminal cut the display, so a long argv stays searchable without widening
+  every row.
 - **`--rows` is the script calling itself.** fzf's `reload` binding needs a
   command string, and pointing it back at this script beats embedding the awk
   program in something that has to survive both bash and `sh` quoting. The
-  visible column is padded there too, rather than left to fzf's `--with-nth`,
-  which prints the raw tabs and lets the port column move with every label
-  length. The port is repeated as a hidden field because the visible one
-  carries ANSI escapes and a truncation, so it can no longer be parsed.
+  columns are padded there too, rather than left to fzf's `--with-nth`, which
+  prints the raw tabs and lets them move with every label length. The port is
+  repeated as a hidden trailing field because the visible one carries ANSI
+  escapes, so it can no longer be parsed.
 
 `SUPER + ALT + P` was free; `SUPER + SHIFT + P` is Google Photos and
 `SUPER + P` is *Pseudo window*. Check with `omarchy menu keybindings --print`
