@@ -20,20 +20,18 @@ included by templates, never applied on its own.
 ## Docs
 
 `README.md` is the per-item reference: one section per managed file, why it is
-shaped that way, and the traps. `docs/` holds the background that is about the
-system rather than about a file here. Read the matching one before designing a
-change; do not re-derive it.
+shaped that way, and the traps. Read the matching section before designing a
+change; do not re-derive it. Its *Docs* heading also lists which extension
+surface each managed file is standing on.
 
-- [`docs/omarchy-extension-surfaces.md`](docs/omarchy-extension-surfaces.md) —
-  every place user functionality can be added to this desktop (menu rows,
-  launchers, keybindings, bar modules, shell plugins, indicators, hooks, themed
-  templates, notifications, shell IPC), ordered cheapest first, plus the two
-  surfaces whose shipped comments overstate what is extensible. **Read this
-  before adding any new desktop functionality** — picking a rung too low is the
-  expensive mistake, and it is the one this repo has already made once.
+Background about the desktop rather than about a file here lives in the
+`omarchy-extensions` skill, not in this repo — every place user functionality
+can be added (menu rows, launchers, keybindings, bar modules, shell plugins,
+indicators, hooks, themed templates, notifications, shell IPC), ordered cheapest
+first, and the traps found by building them. See rule 1.
 
-`docs/` is in `.chezmoiignore`, like `AGENTS.md` and `README.md`; without that
-entry chezmoi would create `~/docs`.
+`.chezmoiignore` still lists `docs/`, which no longer exists: without an entry,
+re-adding a docs directory would silently create `~/docs`.
 
 ## The machines
 
@@ -60,8 +58,8 @@ so overrides are additive and only need the keys they change.
 1. **Read `skill://omarchy` before touching any desktop config** —
    `~/.config/hypr/`, `~/.config/omarchy/`, terminal configs, themes, hooks.
    It documents the `omarchy` CLI and the per-area topic guides. When the change
-   *adds* functionality rather than adjusting existing config, pick the surface
-   from `docs/omarchy-extension-surfaces.md` first and say which rung and why.
+   *adds* functionality rather than adjusting existing config, read
+   `skill://omarchy-extensions` first and say which rung you picked and why.
 2. **Never write to `/usr/share/omarchy/`** by hand. It is package-owned and
    `omarchy update` wipes it. Reading it is encouraged — that is where the
    defaults you are overriding live. The one thing that *does* install there,
@@ -104,15 +102,29 @@ about to create it in `~`.
 See `README.md` for the per-item detail. Summary:
 
 - `dot_config/hypr/input.lua` — Hyprland input overrides (Caps Lock ⇄ Escape).
+- `dot_config/hypr/bindings.lua` — Omarchy's commented starter plus one
+  binding: `SUPER + ALT + P` opens the dev-ports picker. The description
+  argument is what `omarchy menu keybindings` renders, so never omit it.
+- `dot_config/omarchy/extensions/omarchy-menu.jsonc` — the starter plus one
+  root row, *Dev ports*, opening the same picker. Hot-reloads on save.
 - `dot_config/omarchy/shell.json` — the bar layout and the `idle` screensaver
   and lock timeouts. Stock apart from the widget order and the `jonny.ports`
   entry. Bar widget QML edits need `omarchy restart shell`, not just a save.
-- `dot_config/omarchy/plugins/jonny.ports/` — the dev-ports widget: which local
-  servers are listening, labelled from `/proc/<pid>/cwd` rather than the useless
-  process name, click a row to open it. `ports.sh` does the scanning and runs
-  standalone; the QML only draws its TSV. Container ports are named from
-  `docker ps`, but only when `/run/docker.pid` already exists, so drawing the
-  bar never wakes a sleeping daemon.
+- `dot_config/omarchy/plugins/jonny.ports/` — dev ports: which local servers
+  are listening, labelled from `/proc/<pid>/cwd` rather than the useless
+  process name. `ports.sh` does the scanning and runs standalone; both front
+  ends only draw its TSV — `BarWidget.qml` for the mouse, `ports-tui.sh` (fzf,
+  in a floating terminal that closes on selection) for the keyboard. The
+  picker reads its port range and `httpsPorts` out of the widget's
+  `shell.json` entry, so the two never disagree. Container ports are named
+  from `docker ps`, but only when `/run/docker.pid` already exists, so drawing
+  the bar never wakes a sleeping daemon. Two hard-won rules for the picker: a
+  custom TUI needs `--app-id=TUI.float` to float at all, and it must hand the
+  browser launch to Hyprland (`hl.dsp.exec_cmd`) rather than run it, because a
+  process that is about to exit cannot spawn one — see README.
+- `dot_config/omarchy/themed/fzf.env.tpl` — the fzf palette, rendered per
+  theme and sourced by the picker at launch. No `theme-set.d` hook: the
+  consumer reads the state dir directly.
 - `dot_bashrc` + `dot_config/blesh/init.sh` + `dot_config/bash/` — ble.sh (the
   zsh-autosuggestions equivalent), its settings, its fzf/zoxide integrations,
   and the aliases ported from the old zsh setup. Requires `yay -S blesh-git`;
