@@ -1,21 +1,30 @@
 symbolPreset: nerd
-composer: 
+composer:
   shape: pi
-theme: 
+theme:
   dark: omarchy-system
   light: omarchy-system
 setupVersion: 2
 defaultThinkingLevel: medium
-modelRoles: 
+modelRoles:
   default: anthropic/claude-opus-5:medium
-github: 
+  smol: anthropic/claude-opus-5:medium
+  slow: anthropic/claude-opus-5:medium
+  vision: anthropic/claude-opus-5:medium
+  plan: anthropic/claude-opus-5:medium
+  designer: anthropic/claude-opus-5:medium
+  commit: anthropic/claude-opus-5:medium
+  tiny: anthropic/claude-haiku-4-5:high
+  task: anthropic/claude-opus-5:medium
+  advisor: anthropic/claude-opus-5:medium
+github:
   enabled: true
 hideThinkingBlock: true
-startup: 
+startup:
   checkUpdate: false
-statusLine: 
+statusLine:
   preset: custom
-  leftSegments: 
+  leftSegments:
     - pi
     - model
     - mode
@@ -25,17 +34,17 @@ statusLine:
     - pr
     - context_pct
     - quota
-  rightSegments: 
+  rightSegments:
     - session_name
   separator: powerline-thin
-  segmentOptions: 
-    model: 
+  segmentOptions:
+    model:
       showThinkingLevel: true
-    path: 
+    path:
       abbreviate: true
       maxLength: 40
       stripWorkPrefix: true
-    git: 
+    git:
       showBranch: true
       showStaged: true
       showUnstaged: true
