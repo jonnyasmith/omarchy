@@ -45,15 +45,99 @@ than about a file here lives in `docs/`:
 
 ## New Machine
 
-`sourceDir` is non-default, so name it explicitly instead of letting `init`
-pick `~/.local/share/chezmoi`:
+Four commands, of which only the first runs before chezmoi exists:
 
 ```bash
-chezmoi init --source ~/dev/dotfiles --apply <git-remote-url>
+sudo pacman -S chezmoi                    # Omarchy does not ship it
+chezmoi init --source ~/dev/dotfiles      # writes ~/.config/chezmoi/chezmoi.toml
+chezmoi diff                              # review; files only, see above
+chezmoi apply
 ```
 
-No remote is configured yet; add one with
-`git remote add origin <url> && git push -u origin master`.
+`sourceDir` is non-default, so name it explicitly on that first `init` instead
+of letting it pick `~/.local/share/chezmoi`; the config it renders restates
+`sourceDir`, so every command after that works from any directory with no flag.
+`init` clones only when it finds no git repo in the source directory, so
+pointing it at an existing clone of this repo is safe. On a machine without the
+clone, pass the remote and let it do both:
+`chezmoi init --source ~/dev/dotfiles --apply <git-remote-url>`.
+
+`init` is also the only thing that asks the three questions in
+`.chezmoi.toml.tmpl`. To answer them without a prompt — a container, or an
+unattended re-image — populate them on the command line instead:
+
+```bash
+chezmoi init --source ~/dev/dotfiles \
+  --promptBool work=false --promptString workOrgs=,workEmail=
+```
+
+If pacman is not an option (another distro, or no root), chezmoi installs
+itself and hands straight over:
+
+```bash
+sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin \
+  init --source ~/dev/dotfiles --apply
+```
+
+Run the apply from a **graphical** session. Every privileged step in this repo
+goes through `pkexec`, which needs the polkit agent to prompt with; over ssh
+with no agent reachable those steps fail and the apply stops.
+
+### What the first apply installs
+
+`chezmoi apply` used to land files whose programs did not exist — the ble.sh
+guard in `dot_bashrc` fell through to plain bash, the mise tool list stayed
+empty, and `run_after_sshd-tailnet.sh` exited at `command -v tailscale`,
+leaving port 22 shut. Three scripts close that gap:
+
+| Script | Runs | Does |
+|---|---|---|
+| `run_once_before_00-packages.sh` | once per machine, before any file | `tailscale` + `tailscaled.service`, `blesh-git` from the AUR, adds you to the `docker` group |
+| `run_once_after_fingerprint-tod.sh` | once per machine, gated on the reader's USB ID | builds `libfprint-tod` and the matching TOD blob — the executable form of the AUR block in the fingerprint skill guide |
+| `run_onchange_after_mise.sh.tmpl` | when `dot_config/mise/config.toml` changes | `mise install` for the pinned tool set |
+
+`before_` on the packages script is load-bearing: ble.sh and tailscale have to
+exist before the files that reference them and before the `run_after_` scripts
+that gate on them, in the same apply. The other two are `after_` — the mise one
+because it reads a file this apply writes, the TOD one so a multi-minute
+`makepkg` never delays the file tree.
+
+`once_` is keyed on each script's contents, per machine, in chezmoi's state
+database rather than in this repo. So a failed step is retried on the next
+apply, an edit here re-runs it deliberately, and every step is written to be
+idempotent and gated for exactly that reason. To force a re-run without
+editing:
+
+```bash
+chezmoi state dump | jq '.scriptState'                  # what has run
+chezmoi state delete-bucket --bucket=scriptState        # forget all of it
+```
+
+Privileged steps use `pkexec` rather than `omarchy pkg add` / `omarchy pkg aur
+add`, the wrappers rule 6 would otherwise point at: both hard-code `sudo`,
+which needs a terminal to type a password into. For yay that means
+`--sudo /usr/bin/pkexec`, which routes only its pacman half through polkit and
+still builds unprivileged.
+
+### What no script can do
+
+Four things need a human, and the packages script prints the ones still
+outstanding at the end of every run rather than assuming they happened:
+
+| Step | Why it cannot be scripted | Until then |
+|---|---|---|
+| `tailscale up` | browser SSO | nothing reaches port 22 |
+| 1Password → Developer → *Use the SSH agent* | GUI-only toggle | ssh has no key; no private key is on disk |
+| log out and back in | group membership only reaches a process at login | `docker info` fails, so `run_after_portainer.sh` keeps deferring |
+| `fprintd-enroll -f right-index-finger` then `fprintd-verify` | touches on the sensor | `run_after_omarchy-fingerprint-pam.sh` wires nothing — an enrolled finger is its guard |
+
+The last two want one more `chezmoi apply` afterwards, which is when Portainer
+starts and the fingerprint PAM stacks land. The first `nvim` launch syncs
+lazy.nvim against `create_lazy-lock.json` on its own.
+
+`~/.config/dev-env/` is the one thing left entirely by hand: `denv.sh` reads its
+per-repo templates from there and they are unmanaged on purpose, because an
+`op://` reference names a client (rule 7).
 
 ## Bash line editor
 

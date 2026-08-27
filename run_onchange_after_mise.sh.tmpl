@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#
+# Installs the pinned global tool set once dot_config/mise/config.toml is on
+# disk. Omarchy's bash rc already runs `mise activate`, so nothing here wires
+# mise up -- but nothing installed the tools either, and mise only builds what
+# it is told to. `chezmoi apply` plus this script is the whole restore path.
+#
+# after_ because the config file this reads has to be applied first.
+# run_onchange_, keyed on that file, so the install runs when the pinned set
+# changes and never on a plain apply. Every entry is already `--needed` by
+# nature: mise skips a version it has.
+#
+# Expect this to take a while on a new machine -- the list holds three node
+# majors, two python and two dotnet. `minimum_release_age = "7d"` in the same
+# file means `latest` resolves to the newest release at least a week old, so a
+# fresh install lands on the same versions an older machine has.
+#
+# config.toml: {{ include "dot_config/mise/config.toml" | sha256sum }}
+
+set -euo pipefail
+
+command -v mise >/dev/null 2>&1 || exit 0
+
+echo "Installing the pinned mise tool set..."
+mise install --yes

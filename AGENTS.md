@@ -211,3 +211,13 @@ See `README.md` for the per-item detail. Summary:
   can cool (PL1 45 W / 28 s, PL2 60 W, both domains, re-applied after resume)
   and enables PCIe runtime D3 plus the nvidia sleep units for the dGPU. Gated
   on the DMI product name; read the README before editing.
+- `run_once_before_00-packages.sh` + `run_once_after_fingerprint-tod.sh` +
+  `run_onchange_after_mise.sh.tmpl` — the bootstrap the repo used to leave as
+  README prose: tailscale, `blesh-git` from the AUR and the `docker` group
+  before any file lands, the TOD fingerprint driver for a reader stock libfprint
+  cannot bind (gated on its USB ID, and the executable twin of the AUR block in
+  `.chezmoitemplates/omarchy/fingerprint.md` — keep the two in step), and
+  `mise install` for the pinned tool set. `once_` state is per machine in
+  chezmoi's own database, so editing one re-runs it; every step is gated and
+  idempotent because of that. Everything left needs a human present and is
+  printed at the end of a run, never assumed — see README *New Machine*.
