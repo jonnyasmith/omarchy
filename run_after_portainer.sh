@@ -17,6 +17,20 @@ set -uo pipefail
 
 command -v docker >/dev/null 2>&1 || exit 0
 
+# Omarchy enables docker.socket but not docker.service, so dockerd only starts
+# when a client first connects to the socket. Nothing connects at boot, so a
+# `restart: always` container -- portainer -- stays down until someone runs a
+# docker command by hand, which is what socket activation then makes look like a
+# coincidence. Enabling the service is the whole fix; containerd comes with it
+# through docker.service's `Wants`, so it needs no enable of its own.
+#
+# Guarded on is-enabled so a converged machine raises no polkit prompt.
+if ! systemctl is-enabled --quiet docker.service; then
+  echo "Enabling docker.service so containers start at boot (needs root)..."
+  pkexec systemctl enable --now docker.service ||
+    echo "Could not enable docker.service -- portainer will not survive a reboot" >&2
+fi
+
 # `docker info`, not a socket path: it is also the group-membership probe. On
 # the apply that added this account to `docker` the socket exists and this shell
 # still cannot read it, and compose would fail rather than defer.

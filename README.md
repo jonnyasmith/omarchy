@@ -1036,6 +1036,15 @@ than configuring the machine. It writes `/opt/portainer/docker-compose.yml` —
 outside `$HOME`, hence a script and not a target file — and brings the stack up
 on <http://localhost:9000>.
 
+Omarchy enables `docker.socket` and leaves `docker.service` disabled, so
+`dockerd` starts only when a client first connects to the socket. Nothing does
+that at boot, and a container with `restart: always` is restored by the daemon
+as it starts — so Portainer stayed down after every reboot until the next
+`docker` command run by hand appeared to fix it. The script enables
+`docker.service`, guarded on `systemctl is-enabled` so a converged machine
+raises no polkit prompt. `containerd` needs no enable of its own:
+`docker.service` pulls it in through `Wants`.
+
 Docker itself is not installed by this repo; the script is a no-op without it.
 `docker info` is the gate and doubles as the group-membership probe: on the
 apply that adds this account to `docker` the socket exists and the shell still
