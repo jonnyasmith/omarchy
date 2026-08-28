@@ -150,7 +150,10 @@ See `README.md` for the per-item detail. Summary:
   verified by reading it back and `cmp`-ing it against the file, because
   `conv=fsync` only proves the drive *accepted* the bytes. Every destructive
   action is confirmed by typing the device name, and re-checks that nothing is
-  mounted because `udiskie --automount` will have remounted it — see README.
+  mounted because `udiskie --automount` will have remounted it. Power-off has
+  nothing to type, so it gets the extra list level format and write get from
+  their filesystem and image menus, defaulting to *Keep it attached* — see
+  README.
 - `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — `vfzf`, the modal fzf
   both pickers source, so their keys cannot drift: normal mode by default, no
   input line at all, `j`/`k` move, `l` or enter opens, `h` goes back, `/` opens

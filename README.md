@@ -1114,13 +1114,14 @@ what a removable drive is; the picker only draws that TSV, exactly as
 
 ### Walking the tree
 
-Three levels — drive, then action, then filesystem or image — and every level
-is the same modal fzf with the same keys, described once under *Modal fzf*
-above. `l` or `enter` goes down, `h` comes back up, `r` rescans the drive list.
-Going *down* is a keypress on a list rather than a chord on the drive list: a
-chord that erases a drive is a chord pressed by accident.
+Three levels — drive, then action, then filesystem, image or a power-off
+confirmation — and every level is the same modal fzf with the same keys,
+described once under *Modal fzf* above. `l` or `enter` goes down, `h` comes
+back up, `r` rescans the drive list. Going *down* is a keypress on a list
+rather than a chord on the drive list: a chord that erases a drive is a chord
+pressed by accident.
 
-Two things the tree itself had to get right:
+Three things the tree itself had to get right:
 
 - **One wrapper, three outcomes.** `vfzf` returns 0 with the row, 2 for back,
   1 for quit; the drive list folds 2 into 1 because there is nothing above it,
@@ -1130,6 +1131,14 @@ Two things the tree itself had to get right:
   submenu backed out of has nothing to read, and pausing there swallowed the
   next keystroke — which is usually the next `h`. Hence the distinct return
   code rather than a bare `|| return 0`.
+- **Every action needs a third level, power off included.** Format and write
+  got one for free — the filesystem list and the image list — so on the action
+  menu those two are two keypresses from happening and *Power off* was one.
+  Cutting power to a drive destroys no data, so there is no drive name to type
+  either, which left the most easily mispressed row as the least guarded one.
+  It now opens a list of its own whose *first*, selected row is "Keep it
+  attached", so a stray `l l` lands on the harmless half and backing out is the
+  same non-event as backing out of the filesystem list.
 
 A drive unplugged between the scan and the keypress sends the picker round to
 rescan, with a notification, rather than exiting: that is a stale row, not a
@@ -1176,7 +1185,7 @@ restores.
 
 | Action | What happens |
 |---|---|
-| Power off | unmount every partition, then `udisksctl power-off -b`, then a notification saying it is safe to unplug |
+| Power off | a *Keep it attached* / *Power off* list first, then unmount every partition, `udisksctl power-off -b`, and a notification saying it is safe to unplug |
 | Format | one partition filling the drive, `vfat`, `exfat` or `ext4`, labelled, mounted when it is done |
 | Write image | `sudo dd … bs=4M oflag=direct conv=fsync`, then a read-back comparison, then an offer to power the drive off |
 

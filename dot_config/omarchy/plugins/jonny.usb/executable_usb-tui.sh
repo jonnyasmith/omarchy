@@ -7,11 +7,13 @@
 # Unlike the dev-ports picker this one does *not* exit on the first keystroke:
 # dd prints progress for minutes and every destructive action asks to be
 # confirmed by name, so the window has to stay until the work is finished and
-# read. It is a tree -- drive, then action, then filesystem or image -- walked
-# in normal mode: j/k move, l or enter goes down, h comes back up, `/` searches
-# and esc leaves the search. See ../jonny.lib/vim-fzf.sh, which owns all of
-# that. Choosing an action is a second list rather than a chord on the drive
-# list: a chord that erases a drive is a chord pressed by accident.
+# read. It is a tree -- drive, then action, then filesystem, image or a
+# power-off confirmation -- walked in normal mode: j/k move, l or enter goes
+# down, h comes back up, `/` searches and esc leaves the search. See
+# ../jonny.lib/vim-fzf.sh, which owns all of that. Choosing an action is a
+# second list rather than a chord on the drive list, and every action has a
+# third level below it: a keypress that cuts power to a drive, or erases one,
+# is a keypress made by accident.
 #
 #   usb-tui.sh                 pick a drive, then an action
 #   usb-tui.sh /dev/sdb        skip the picker; usable by hand
@@ -191,6 +193,25 @@ confirm_destructive() {
 }
 
 # ── power off ────────────────────────────────────────────────────────────────
+
+# Power-off is the odd one out: it destroys no data, so there is no drive name
+# to type, and on the action menu it therefore sat one keypress away from a
+# drive being cut off mid-write. It gets the extra level the other two get for
+# free from their filesystem and image lists -- a list whose *first* row is
+# "leave it alone", so a stray `l l` lands on the harmless one.
+confirm_poweroff() {
+  local choice
+  choice=$(
+    printf '%s\n' \
+      $'Keep it attached\tgo back and do nothing\tno' \
+      "Power off $device"$'\tflush writes and cut power; then unplug it\tyes' |
+      awk -F'\t' -v a="$accent" -v x="$danger" -v d="$dim" -v r="$reset" \
+        '{ printf "%s%-22s%s %s%s%s\t%s\n", ($3 == "yes" ? x : a), $1, r, d, $2, r, $3 }' |
+      vfzf --ctx "$accent$g_power  power off — $(describe)$reset" --back -- \
+        --delimiter=$'\t' --with-nth=1
+  ) || return 2
+  [[ $(vfzf_row "$choice" | cut -f2) == yes ]] || return 2
+}
 
 do_poweroff() {
   local err
@@ -402,7 +423,9 @@ action_menu() {
     (( rc == 2 )) && return 2
     (( rc == 0 )) || return 0
     case $(vfzf_row "$action" | cut -f2) in
-      poweroff) do_poweroff; pause; return 0 ;;
+      # Backing out of the confirmation (2) is the same non-event as backing
+      # out of the filesystem list: nothing ran, so nothing to read.
+      poweroff) confirm_poweroff || continue; do_poweroff; pause; return 0 ;;
       # Anything that ran, finished or failed, leaves output worth reading; a
       # submenu backed out of (2) leaves none, so it goes straight back.
       format) do_format; (( $? == 2 )) || pause ;;
