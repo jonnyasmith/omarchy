@@ -1207,7 +1207,7 @@ restores.
 |---|---|
 | Power off | unmount every partition, then `udisksctl power-off -b`, then a notification saying it is safe to unplug |
 | Format | one partition filling the drive, `vfat`, `exfat` or `ext4`, labelled, mounted when it is done |
-| Write image | `sudo dd … bs=4M oflag=direct conv=fsync`, then an offer to power the drive off |
+| Write image | `sudo dd … bs=4M oflag=direct conv=fsync`, then a read-back comparison, then an offer to power the drive off |
 
 Format writes MBR below 2 TiB and GPT above it: MBR is the table a camera, a
 car stereo and an old Windows box can all read, and above 2 TiB it cannot
@@ -1227,7 +1227,39 @@ with a *type a path instead…* row for anything elsewhere. It refuses an image
 larger than the drive before touching it, and a hybrid ISO is written raw,
 which is what those ISOs are built for.
 
-### Six things that are the way they are for a reason
+### Why the write is read back
+
+`conv=fsync` makes `dd`'s exit status mean the bytes reached the device, not
+the page cache — but "reached the device" is the drive's own word for it. A
+dying stick, or a counterfeit one lying about its capacity, acknowledges a
+write and stores something else; the next thing anyone learns about it is a
+kernel panic partway through an install. So after `sync` the script reads the
+written region back off the drive and `cmp`s it against the image, and a
+mismatch says *do not boot from this* and refuses to offer the power-off.
+
+The cost is a second full read of the image's length, so a 1 GB ISO roughly
+doubles the wall time — paid on a progress line, on the one operation a person
+is already sitting and watching.
+
+Two flags do the work, and neither is the obvious one:
+
+- **`blockdev --flushbufs`, not `iflag=direct`, on the read.** O_DIRECT needs
+  every read length sector-aligned and the final partial block is not, so the
+  read that matters is the one that fails. Dropping the device's buffer cache
+  instead reaches the platters just as well. Without *either*, the comparison
+  is satisfied from the copy still in RAM and verifies nothing at all.
+- **`iflag=count_bytes`,** so `count=$size` is the image's exact byte count
+  rather than a block count rounded up to the next 4M — which would leave
+  `cmp` comparing trailing drive contents against end-of-file and failing every
+  time.
+
+On a mismatch `dd` also prints `error writing 'standard output': Broken pipe`,
+because `cmp` stopped reading at the first differing byte. That line is normal
+and comes from the comparison working. Its stderr is *not* redirected away,
+because the other thing that appears there is a read error — a drive that
+cannot be read back is exactly the drive this check exists to catch.
+
+### Seven things that are the way they are for a reason
 
 - **The window stays open, so this is not a `--expect` picker.** `dd` prints
   progress for minutes and every destructive action asks to be confirmed, so
@@ -1259,7 +1291,11 @@ which is what those ISOs are built for.
   refusing the password, where nothing was written, and `dd` stopping part way,
   where the drive holds neither its old filesystem nor a bootable image. The
   message names that state rather than printing an error code, because the
-  wrong thing to read at that point is "it is fine".
+  wrong thing to read at that point is "it is fine". The read-back failing is
+  the third state and the nastiest, because everything printed above it looked
+  like success: that message says *do not boot from it* and blames the drive,
+  which is what a stick that acknowledges writes and stores something else has
+  earned.
 
 `SUPER + ALT + U` was free — check with `omarchy menu keybindings --print`
 before taking a chord — and the description argument to `o.bind` is what that

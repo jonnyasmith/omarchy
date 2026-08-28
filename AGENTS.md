@@ -141,10 +141,12 @@ See `README.md` for the per-item detail. Summary:
   the three actions. No `manifest.json` — this is not a shell plugin, and the
   shell's scan skips a directory without one. Unmount, format and power-off go
   through udisks over D-Bus, which needs no password for a local session; only
-  the image write is `sudo dd`, because no unprivileged route into a raw block
-  device exists from a shell. Every destructive action is confirmed by typing
-  the device name, and re-checks that nothing is mounted because
-  `udiskie --automount` will have remounted it — see README.
+  the image write and its read-back are `sudo dd`, because no unprivileged
+  route into a raw block device exists from a shell. An image write is always
+  verified by reading it back and `cmp`-ing it against the file, because
+  `conv=fsync` only proves the drive *accepted* the bytes. Every destructive
+  action is confirmed by typing the device name, and re-checks that nothing is
+  mounted because `udiskie --automount` will have remounted it — see README.
 - `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — `vfzf`, the modal fzf
   both pickers source, so their keys cannot drift: normal mode by default, no
   input line at all, `j`/`k` move, `l` or enter opens, `h` goes back, `/` opens

@@ -341,7 +341,35 @@ do_write() {
     return 1
   fi
   sync
-  echo "${accent}wrote $(basename "$image") to $device.${reset}"
+
+  # dd exiting 0 with conv=fsync only means the drive *accepted* the bytes. A
+  # dying stick, or one lying about its capacity, acks a write and stores
+  # something else -- and the reader finds out from a kernel panic halfway
+  # through an install. So read the written region back and compare it.
+  #
+  # blockdev --flushbufs rather than iflag=direct on the read: O_DIRECT needs
+  # every read length aligned, which the final partial block is not, while
+  # count_bytes is what lets dd stop on the image's exact byte count instead of
+  # rounding up to 4M and confusing cmp. Dropping the buffer cache first is
+  # what makes this read the drive rather than the copy of it still in RAM --
+  # without it the comparison verifies nothing.
+  echo
+  echo "${dim}verifying: reading it back off the drive.${reset}"
+  # Unchecked, a failed flush would leave the comparison reading RAM and
+  # passing every time -- a verification step that cannot fail is worse than
+  # none, because it is believed.
+  if ! sudo blockdev --flushbufs "$device"; then
+    echo "${danger}could not drop the drive's cache, so the write cannot be verified.${reset}" >&2
+    return 1
+  fi
+  if ! sudo dd if="$device" bs=4M count="$size" iflag=count_bytes status=progress |
+      cmp "$image" -; then
+    # cmp has already named the first differing byte, or dd the read error.
+    echo "${danger}the drive does not read back what was written.${reset}" >&2
+    echo "Do not boot from it. Try a different drive, or a different port; a drive that fails this is usually failing." >&2
+    return 1
+  fi
+  echo "${accent}wrote and verified $(basename "$image") on $device.${reset}"
 
   echo
   read -rn1 -p "power the drive off for removal? [y/N] " answer
