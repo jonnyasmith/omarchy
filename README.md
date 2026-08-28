@@ -345,6 +345,11 @@ The leader is `ctrl+a`, not herdr's default `ctrl+space`. Consequence: `ctrl+a`
 no longer reaches readline (`beginning-of-line`) or a nested tmux inside a
 herdr pane.
 
+Workspace switching also answers `alt+j` / `alt+k` alongside `alt+down` /
+`alt+up`, so the motion keys match the vim-direction pane focus keys added to
+`tmux.conf`. Nothing else in the file binds bare `alt` with a letter — tabs are
+`alt+left` / `alt+right` — so the pair is free.
+
 Only `~/.config/herdr/config.toml` is managed. The sibling files herdr writes
 there — `session.json`, `.plugins.lock`, `release-notes.json`, the two logs —
 are runtime state and stay out of the repo.
