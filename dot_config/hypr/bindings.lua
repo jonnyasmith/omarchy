@@ -28,6 +28,14 @@
 -- o.bind("SUPER + H", nil, "voxtype record toggle")
 -- o.bind("SUPER + PERIOD", nil, "omarchy-shell shell toggle omarchy.emojis")
 
+-- Audio outputs: switch current and future streams between local speakers,
+-- HomePods and Apple TVs. Same floating-TUI route as the pickers below.
+o.bind(
+  "SUPER + ALT + A",
+  "Audio output",
+  "omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.audio/audio-tui.sh"
+)
+
 -- Dev ports: pick a listening local dev server and open it, keyboard only.
 -- TUI.float is the app-id Omarchy's own window rules float
 -- (default/hypr/apps/system.lua); the app-id omarchy-launch-tui would derive

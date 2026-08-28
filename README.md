@@ -47,7 +47,7 @@ What this repo is standing on:
 | Surface | Here |
 |---|---|
 | Menu row | `dot_config/omarchy/extensions/omarchy-menu.jsonc` — a *Plugins* container holding *Audio output*, *Dev ports* and *USB drives* |
-| Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + P`, `SUPER + ALT + U` |
+| Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + A`, `SUPER + ALT + P`, `SUPER + ALT + U` |
 | Hooks (`theme-set.d`) | starship and omp theme bridges |
 | Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env}.tpl` |
 | Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.audio,jonny.ports,jonny.usb}/` |
@@ -57,9 +57,9 @@ What this repo is standing on:
 | Hyprland overrides | `dot_config/hypr/{input,bindings}.lua` |
 | Whole-file copies (no override point) | `dot_config/tmux/tmux.conf`, `dot_config/foot/foot.ini` |
 
-Dev ports and USB drives sit on the same two rungs: a menu row and a chord, each
-handing a shell script to a floating terminal. Audio output uses only the
-cheapest rung, a searchable menu row. None needs a manifest or QML. `jonny.ports`
+All three tools sit on the same two rungs: a searchable menu row and a
+`SUPER + ALT` chord, each handing a shell script to a floating terminal. None
+needs a manifest or QML. `jonny.ports`
 used to be a full shell plugin as well — the most expensive rung — for a bar
 widget with a per-row click popup. The keyboard picker replaced it outright:
 the popup was a second implementation of a list you only ever want at the
@@ -978,8 +978,8 @@ nothing to insert into a list.
 
 ## Audio outputs
 
-*Audio output* under *Plugins* opens one modal picker for local PipeWire sinks,
-HomePods and Apple TVs:
+`SUPER + ALT + A`, or *Audio output* under *Plugins*, opens one modal picker
+for local PipeWire sinks, HomePods and Apple TVs:
 
 | Path | What |
 |---|---|
@@ -988,6 +988,7 @@ HomePods and Apple TVs:
 | `dot_config/omarchy/plugins/jonny.audio/executable_audio-tui.sh` | selects the default sink, moves streams already playing, tests and rescans |
 | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` | the same modal keys as the other pickers |
 | `dot_config/omarchy/extensions/omarchy-menu.jsonc` | the *Audio output* row, searchable as audio, AirPlay, HomePod or speakers |
+| `dot_config/hypr/bindings.lua` | `SUPER + ALT + A` opens the picker |
 
 `pipewire-zeroconf` supplies `libpipewire-module-raop-discover`; Avahi is already
 running on Omarchy. Discovery loads through `pipewire-pulse` with `nofail`,

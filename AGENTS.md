@@ -102,20 +102,22 @@ about to create it in `~`.
 See `README.md` for the per-item detail. Summary:
 
 - `dot_config/hypr/input.lua` — Hyprland input overrides (Caps Lock ⇄ Escape).
-- `dot_config/hypr/bindings.lua` — Omarchy's commented starter plus two
-  bindings: `SUPER + ALT + P` opens the dev-ports picker and
-  `SUPER + ALT + U` the USB-drive picker. The description argument is what
-  `omarchy menu keybindings` renders, so never omit it.
+- `dot_config/hypr/bindings.lua` — Omarchy's commented starter plus three
+  bindings: `SUPER + ALT + A` opens the audio-output picker,
+  `SUPER + ALT + P` the dev-ports picker, and `SUPER + ALT + U` the USB-drive
+  picker. The description argument is what `omarchy menu keybindings` renders,
+  so never omit it.
 - `dot_config/hypr/autostart.lua` — the login session layout: Chromium on
   workspace 1, `foot herdr` on workspace 2, focus left there. Placement is a
   per-launch `[workspace N silent]` exec rule, which survives the `uwsm-app`
   wrapper; only the terminal omits `silent`, so it wins focus.
 - `dot_config/omarchy/extensions/omarchy-menu.jsonc` — the starter plus a
   *Plugins* container (a row with no `action` is a submenu; the parent comes
-  from the dotted id) holding *Dev ports* and *USB drives*. Every new personal
-  tool is one `plugins.<name>` line; nothing goes on the root menu, which is
-  Omarchy's and appends user rows to the bottom. Search and `aliases` still
-  reach the children, so nesting costs nothing typed. Hot-reloads on save;
+  from the dotted id) holding *Audio output*, *Dev ports* and *USB drives*.
+  Every new personal tool is one `plugins.<name>` line; nothing goes on the
+  root menu, which is Omarchy's and appends user rows to the bottom. Search and
+  `aliases` still reach the children, so nesting costs nothing typed.
+  Hot-reloads on save;
   `omarchy menu summon plugins` checks a change parsed without running a row.
   Glyphs are `\u` escapes: they are private-use codepoints and a literal one is
   easy to lose in transit.
@@ -125,6 +127,18 @@ See `README.md` for the per-item detail. Summary:
   content is the widget order. There is no `omarchy bar remove`: dropping an
   entry means editing the file, then `omarchy restart shell`, which is also
   what any bar widget QML edit needs — a save alone is not enough.
+- `dot_config/omarchy/plugins/jonny.audio/` +
+  `dot_config/pipewire/pipewire-pulse.conf.d/50-raop-discover.conf` — audio
+  outputs: local PipeWire sinks and the HomePods and Apple TVs found over
+  AirPlay, in one floating picker. `audio.sh` joins `pactl` sinks to Avahi
+  model/address metadata; `audio-tui.sh` changes the default and moves streams
+  already playing. `alt-t` tests one receiver and `r` reloads the pulse-loaded
+  discovery module after PipeWire destroys a sink on an RTSP error. A direct
+  RTSP OPTIONS probe blocks a receiver returning 403 before it can strand the
+  default on a dead sink; Apple Home must allow speakers to *Anyone on the Same
+  Network* with no password. `pipewire-zeroconf` is a split package installed
+  by the packages script; `nofail` keeps its absence from taking all audio down.
+  See README before changing the discovery route or access probe.
 - `dot_config/omarchy/plugins/jonny.ports/` — dev ports: which local servers
   are listening, labelled from `/proc/<pid>/cwd` rather than the useless
   process name. `ports.sh` does the scanning and runs standalone; `ports-tui.sh`
@@ -155,11 +169,11 @@ See `README.md` for the per-item detail. Summary:
   their filesystem and image menus, defaulting to *Keep it attached* — see
   README.
 - `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — `vfzf`, the modal fzf
-  both pickers source, so their keys cannot drift: normal mode by default, no
-  input line at all, `j`/`k` move, `l` or enter opens, `h` goes back, `/` opens
-  a search box, esc closes it. The footer is the mode line and changes with the
-  mode. Sourced, not run, so no `executable_` prefix. Four things to know
-  before editing it: `--no-input` is what frees bare letters to be keys; the
+  all three pickers source, so their keys cannot drift: normal mode by default,
+  no input line at all, `j`/`k` move, `l` or enter opens, `h` goes back, `/`
+  opens a search box, esc closes it. The footer is the mode line and changes
+  with the mode. Sourced, not run, so no `executable_` prefix. Four things to
+  know before editing it: `--no-input` is what frees bare letters to be keys;
   bare keys are unbound on entering search and rebound on leaving, from one
   list; esc is a `transform` on `$FZF_INPUT_STATE` because it means two
   different things; and `clear-query` must lead that chain from *outside* the
