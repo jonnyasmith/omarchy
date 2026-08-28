@@ -766,6 +766,40 @@ Caps Lock.
 
 Validate after `chezmoi apply` with `hyprctl reload && hyprctl configerrors`.
 
+## Login session layout
+
+`dot_config/hypr/autostart.lua` opens the two windows every session starts
+with: Chromium on workspace 1, and a `foot` running
+[herdr](https://herdr.dev) on workspace 2, which is left focused.
+
+```lua
+o.exec_on_start("[workspace 1 silent] " .. o.launch("chromium"))
+o.exec_on_start("[workspace 2] " .. o.launch("foot herdr"))
+```
+
+`o.exec_on_start` is Omarchy's wrapper for `hl.on("hyprland.start", ...)`, so
+these run once per Hyprland start, not on `hyprctl reload`.
+
+The `[workspace N ...]` prefix is a Hyprland *exec rule*: the window the
+launched pid maps to is placed on that workspace. It keeps working through the
+`uwsm-app --` wrapper `o.launch()` adds, even though the app ends up in a
+systemd scope — verified with
+`hyprctl dispatch 'hl.dsp.exec_cmd("[workspace 9 silent] uwsm-app -- foot")'`.
+Note the dispatch syntax: Hyprland's `hyprctl dispatch` takes Lua now, so the
+old `hyprctl dispatch exec '[workspace 9] foot'` form is a parse error.
+
+`silent` places the window without following it, so only the terminal — which
+deliberately omits `silent` — decides where focus lands. Reverse the two lines
+and focus would settle on workspace 1 instead.
+
+A persistent `o.window({ class = "chromium" }, { "workspace 1" })` rule would
+also place the browser, but it would pin *every* future Chromium window there.
+The exec rule applies to this one launch only.
+
+Nothing here is testable without logging out; to rehearse it, run the same two
+strings through `hyprctl dispatch 'hl.dsp.exec_cmd("...")'` against a scratch
+workspace.
+
 ## Stay awake
 
 Omarchy already ships this, so nothing here is custom code. The `omarchy.idle`

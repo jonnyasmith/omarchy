@@ -106,6 +106,10 @@ See `README.md` for the per-item detail. Summary:
   bindings: `SUPER + ALT + P` opens the dev-ports picker and
   `SUPER + ALT + U` the USB-drive picker. The description argument is what
   `omarchy menu keybindings` renders, so never omit it.
+- `dot_config/hypr/autostart.lua` — the login session layout: Chromium on
+  workspace 1, `foot herdr` on workspace 2, focus left there. Placement is a
+  per-launch `[workspace N silent]` exec rule, which survives the `uwsm-app`
+  wrapper; only the terminal omits `silent`, so it wins focus.
 - `dot_config/omarchy/extensions/omarchy-menu.jsonc` — the starter plus a
   *Plugins* container (a row with no `action` is a submenu; the parent comes
   from the dotted id) holding *Dev ports* and *USB drives*. Every new personal
