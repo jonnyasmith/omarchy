@@ -10,7 +10,7 @@
 # instead — the project directory is what you actually recognise. That only
 # works for processes we own; a container's port belongs to root, so those
 # names come from `docker ps`, and only when the daemon is already awake.
-# Waking it to draw a bar widget would defeat the socket activation that keeps
+# Waking it just to list ports would defeat the socket activation that keeps
 # it asleep.
 
 set -uo pipefail

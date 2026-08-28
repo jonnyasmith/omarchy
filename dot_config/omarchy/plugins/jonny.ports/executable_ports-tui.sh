@@ -1,18 +1,18 @@
 #!/bin/bash
 #
-# The keyboard half of the dev-ports widget: pick a listening dev server, open
-# it, exit. Meant to be run by `omarchy launch tui --app-id=TUI.float`, so the
-# floating terminal it lives in closes the moment this script returns -- which
-# is why nothing here waits on the thing it launched.
+# The dev-ports picker: pick a listening dev server, open it, exit. Meant to be
+# run by `omarchy launch tui --app-id=TUI.float`, so the floating terminal it
+# lives in closes the moment this script returns -- which is why nothing here
+# waits on the thing it launched.
 #
-# It lives beside `ports.sh` and the bar widget because all three share one
-# contract: `ports.sh` prints `port <TAB> label <TAB> detail` and owns every
-# piece of the awkwardness. The widget draws that TSV for the mouse, this
-# draws it for the keyboard, and neither parses a socket itself.
+# It lives beside `ports.sh` because the two split one contract: `ports.sh`
+# prints `port <TAB> label <TAB> detail` and owns every piece of the
+# awkwardness, and this only draws it. There was a bar widget drawing the same
+# TSV for the mouse; it was dropped, and its settings moved here.
 #
 #   enter      open as a webapp window (no tab strip, no address bar)
 #   alt-enter  open as an ordinary browser tab, for devtools and sessions
-#   ctrl-r     rescan
+#   r          rescan
 #   esc        quit, having done nothing
 #
 # `--rows` is this script calling itself: fzf's reload binding needs a command
@@ -71,26 +71,15 @@ if [[ ${1:-} == --rows ]]; then
   exit 0
 fi
 
-# Both surfaces read their port range and their https list from the same place:
-# the widget's own entry in shell.json, whose bare keys are its settings
-# (`entrySettings` in shell/plugins/bar/BarModel.js strips only `id`). Without
-# this the two would silently disagree the day either is configured.
-config="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/shell.json"
-min=3000 max=9999 https=""
-if command -v jq >/dev/null 2>&1 && [[ -f $config ]]; then
-  IFS=$'\t' read -r min max https < <(
-    jq -r '
-      ([.. | objects | select(.id? == "jonny.ports")] | first) // {}
-      | "\(.minPort // 3000)\t\(.maxPort // 9999)\t\((.httpsPorts // []) | join(" "))"
-    ' "$config" 2>/dev/null
-  ) || { min=3000 max=9999 https=""; }
-  [[ $min =~ ^[0-9]+$ ]] || min=3000
-  [[ $max =~ ^[0-9]+$ ]] || max=9999
-fi
+# Ports whose URL wants https. `ss` cannot see a socket's scheme, so the only
+# way to know is to name them. These used to be read out of the bar widget's
+# own entry in shell.json, so the two surfaces could not disagree; the widget
+# is gone and this picker is the only surface, so its settings live with it.
+https_ports=()
 
-# Explicit arguments still win, so this is usable by hand outside the bar.
-min=${1:-$min}
-max=${2:-$max}
+# Explicit arguments still win, so this is usable by hand outside the menu row.
+min=${1:-3000}
+max=${2:-9999}
 
 listing=$(rows "$min" "$max")
 if [[ -z $listing ]]; then
@@ -130,7 +119,7 @@ port=$(vfzf_row "$line" | cut -f2)
 # Always localhost, never the address ss reported: Vite binds [::1] only, so a
 # literal 127.0.0.1 URL built from the port would be a dead link.
 scheme=http
-for p in $https; do [[ $p == "$port" ]] && scheme=https; done
+for p in ${https_ports[@]+"${https_ports[@]}"}; do [[ $p == "$port" ]] && scheme=https; done
 url="$scheme://localhost:$port"
 
 # Hand the launch to Hyprland instead of running it here, because this process
@@ -142,9 +131,7 @@ url="$scheme://localhost:$port"
 # as a transient unit's own main process. `exec`, `setsid --fork` and
 # `systemd-run` (both --service and --scope) all fail the same way: the fix is
 # not detachment, it is that something which is not exiting has to do the
-# spawning. The bar widget never had the bug because `bar.run()` spawns from
-# the long-lived omarchy-shell; Hyprland is the equivalent long-lived process a
-# script can reach.
+# spawning. Hyprland is the one long-lived process a script can reach.
 #
 # `exec_cmd` is the Lua dispatcher name -- `hyprctl dispatch exec <cmd>` is no
 # longer parsed by this Hyprland, it returns a Lua syntax error and rc=7. Both

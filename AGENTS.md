@@ -120,20 +120,24 @@ See `README.md` for the per-item detail. Summary:
   Glyphs are `\u` escapes: they are private-use codepoints and a literal one is
   easy to lose in transit.
 - `dot_config/omarchy/shell.json` — the bar layout and the `idle` screensaver
-  and lock timeouts. Stock apart from the widget order and the `jonny.ports`
-  entry. Bar widget QML edits need `omarchy restart shell`, not just a save.
+  and lock timeouts. Every widget in it is now Omarchy's own; the one custom
+  entry, `jonny.ports`, went when its bar widget was deleted, so the only local
+  content is the widget order. There is no `omarchy bar remove`: dropping an
+  entry means editing the file, then `omarchy restart shell`, which is also
+  what any bar widget QML edit needs — a save alone is not enough.
 - `dot_config/omarchy/plugins/jonny.ports/` — dev ports: which local servers
   are listening, labelled from `/proc/<pid>/cwd` rather than the useless
-  process name. `ports.sh` does the scanning and runs standalone; both front
-  ends only draw its TSV — `BarWidget.qml` for the mouse, `ports-tui.sh` (fzf,
-  in a floating terminal that closes on selection) for the keyboard. The
-  picker reads its port range and `httpsPorts` out of the widget's
-  `shell.json` entry, so the two never disagree. Container ports are named
-  from `docker ps`, but only when `/run/docker.pid` already exists, so drawing
-  the bar never wakes a sleeping daemon. Two hard-won rules for the picker: a
-  custom TUI needs `--app-id=TUI.float` to float at all, and it must hand the
-  browser launch to Hyprland (`hl.dsp.exec_cmd`) rather than run it, because a
-  process that is about to exit cannot spawn one — see README.
+  process name. `ports.sh` does the scanning and runs standalone; `ports-tui.sh`
+  (fzf, in a floating terminal that closes on selection) draws its TSV. No
+  `manifest.json` and no QML: there was a `BarWidget.qml` drawing the same TSV
+  for the mouse, and it was deleted as redundant, which took the port range and
+  `https_ports` out of the `shell.json` entry and into the top of the picker.
+  Container ports are named from `docker ps`, but only when `/run/docker.pid`
+  already exists, so listing ports never wakes a sleeping daemon. Two hard-won
+  rules for the picker: a custom TUI needs `--app-id=TUI.float` to float at
+  all, and it must hand the browser launch to Hyprland (`hl.dsp.exec_cmd`)
+  rather than run it, because a process that is about to exit cannot spawn one
+  — see README.
 - `dot_config/omarchy/plugins/jonny.usb/` — USB drives: format one, write a
   bootable ISO to one, or power one off for safe removal. `usb.sh` decides what
   a removable drive is (removable bit *or* USB transport, minus anything

@@ -50,20 +50,20 @@ What this repo is standing on:
 | Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + P`, `SUPER + ALT + U` |
 | Hooks (`theme-set.d`) | starship and omp theme bridges |
 | Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env}.tpl` |
-| Shell plugin (`bar-widget`) | `dot_config/omarchy/plugins/jonny.ports/` |
-| Floating TUI, no plugin | `dot_config/omarchy/plugins/jonny.usb/` |
+| Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.ports,jonny.usb}/` |
 | Shared picker library | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — modal fzf, sourced by both TUIs |
 | Themes (overlay) | `dot_config/omarchy/themes/gruvbox/neovim.lua` |
 | Branding | `dot_config/omarchy/branding/` |
 | Hyprland overrides | `dot_config/hypr/{input,bindings}.lua` |
 | Whole-file copies (no override point) | `dot_config/tmux/tmux.conf`, `dot_config/foot/foot.ini` |
 
-`jonny.ports` is a full shell plugin, the most expensive rung, and legitimately
-so: it needs a popup with per-row click targets. The same information as a
-*count* would have been a twenty-line command module. `jonny.usb` is the
-counterexample from the other direction: two scripts and two one-line surfaces,
-no manifest and no QML, because a USB stick is only ever interesting in the
-moment you act on it.
+Both tools sit on the same two rungs: a menu row and a chord, each handing a
+shell script to a floating terminal, with no manifest and no QML. `jonny.ports`
+used to be a full shell plugin as well — the most expensive rung — for a bar
+widget with a per-row click popup. The keyboard picker replaced it outright:
+the popup was a second implementation of a list you only ever want at the
+moment you go to open a port, and the glanceable half never earned its cost.
+Deleting it took the plugin back down to two scripts.
 
 ## New Machine
 
@@ -829,18 +829,14 @@ the cluster is hovered and an active one is always shown. There was a custom
 `jonny.caffeine` widget and script here for timed sessions and a lid-close
 inhibitor; both were dropped, because on and off is the whole requirement.
 
-Two things to know when editing any bar widget:
-
-- **Bar widget QML changes need `omarchy restart shell`.** Saving under
-  `~/.config/omarchy/plugins/` logs `Local plugin changed, reloading` and
-  `omarchy-shell shell rescanPlugins` returns cleanly, but neither
-  re-instantiates an already-mounted bar widget. The old component keeps
-  running and the edit looks like it did nothing.
-- **`dot_config/omarchy/shell.json` is managed**, because that is where the bar
-  layout lives and a widget has to be listed there to appear at all. The
-  shell rewrites this file itself whenever the bar is reordered by dragging or
-  by `omarchy bar move`, so expect it to drift; re-`chezmoi add` after
-  deliberate layout changes.
+`dot_config/omarchy/shell.json` is managed anyway, because that is where the
+bar layout and the `idle` timeouts live. Every widget listed in it is now
+Omarchy's own — the one custom entry, `jonny.ports`, went with its widget — so
+the only local content is the order. The shell rewrites this file itself
+whenever the bar is reordered by dragging or by `omarchy bar move`, so expect
+it to drift; re-`chezmoi add` after deliberate layout changes. There is no
+`omarchy bar remove`: taking an entry out means editing the file, and the
+widget only disappears once `omarchy restart shell` has run.
 
 ## Menu extensions
 
@@ -928,14 +924,13 @@ nothing to insert into a list.
 ## Dev ports
 
 A list of the local dev servers that are actually listening, labelled by the
-project each one was started from, one keystroke — or one click — from opening
-in the browser.
+project each one was started from, one keystroke from opening in the browser.
+`SUPER + ALT + P`, or *Dev ports* under *Plugins*.
 
 | Path | What |
 |---|---|
 | `dot_config/omarchy/plugins/jonny.ports/executable_ports.sh` | the whole scan; usable on its own |
-| `dot_config/omarchy/plugins/jonny.ports/` | the bar widget (`manifest.json` + `BarWidget.qml`) |
-| `dot_config/omarchy/plugins/jonny.ports/executable_ports-tui.sh` | the keyboard picker, an fzf front end on the same scan |
+| `dot_config/omarchy/plugins/jonny.ports/executable_ports-tui.sh` | the picker, an fzf front end on that scan |
 | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` | the modal keys, shared with the USB picker |
 | `dot_config/hypr/bindings.lua` | `SUPER + ALT + P` opens the picker |
 | `dot_config/omarchy/extensions/omarchy-menu.jsonc` | the *Dev ports* row, under *Plugins* |
@@ -944,12 +939,23 @@ Those last two files are managed for one entry each; they are otherwise
 Omarchy's own commented starter files. See *Menu extensions* above for why the
 row is not on the root menu.
 
+There was a bar widget too — a `manifest.json` and a `BarWidget.qml` making
+this a full shell plugin, with a popup of per-row click targets. It is gone,
+along with its `jonny.ports` entry in `shell.json`. Two front ends on one TSV
+was one too many: the list is only interesting at the moment you go to open a
+port, which is the moment you have already pressed the chord, and a glanceable
+count of listening servers was never worth a QML component, a scan on a timer
+and a second set of gestures to remember. Removing a widget is three steps —
+delete the two files, delete the `shell.json` entry (there is no
+`omarchy bar remove`), then `omarchy restart shell`, because the running shell
+keeps a mounted widget alive through a plugin rescan.
+
 ```bash
 ~/.config/omarchy/plugins/jonny.ports/ports.sh          # 3000-9999
 ~/.config/omarchy/plugins/jonny.ports/ports.sh 1024 65535
 ```
 
-It prints one TSV row per port — `port`, label, detail — and the widget only
+It prints one TSV row per port — `port`, label, detail — and the picker only
 draws that. Everything awkward lives in the script, where it can be run and
 diffed on its own.
 
@@ -961,10 +967,10 @@ are up. So the label comes from the process's own
 with `/proc/<pid>/cmdline` as the detail line. That only works for processes we
 own. A container's port belongs to root, so those names come from `docker ps`,
 and only when `/run/docker.pid` already exists: `docker.service` here is
-socket-activated and disabled, and waking it to draw a bar widget would defeat
-the point of that.
+socket-activated and disabled, and listing ports is not a good enough reason to
+wake it.
 
-Four details that are easy to get wrong:
+Three details that are easy to get wrong:
 
 - **One port, two sockets.** IPv4 and IPv6 binds are separate `ss` rows. The
   first labelled row for a port wins and the rest are dropped, or portainer
@@ -972,58 +978,16 @@ Four details that are easy to get wrong:
 - **Always `localhost`, never the bound address.** Vite binds `[::1]` only, so
   a URL built from the observed address as `127.0.0.1:5173` is a dead link.
 - **A socket has no scheme.** `ss` cannot tell you that a port wants https, so
-  ports that do are listed in `httpsPorts` on the `shell.json` entry.
-- **`shellQuote` is not on the bar.** Omarchy's bar README lists
-  `bar.shellQuote(value)` beside `bar.run(command)`, but only `run` exists;
-  quoting lives on the `qs.Commons` `Util` singleton, as `Util.shellQuote`.
-  Calling the documented one throws out of the click handler with nothing in
-  the journal, so the row just looks dead.
+  ports that do are named in `https_ports` at the top of `ports-tui.sh`. That
+  list, and the `3000`–`9999` default window that keeps `:53` and `:631` out,
+  used to be read out of the widget's `shell.json` entry with `jq` so the two
+  surfaces could not disagree. With one surface left they are plain variables
+  in the script; the range is still overridable per run
+  (`ports-tui.sh 1024 65535`).
 
-Settings, all optional, inline on the `bar.layout` entry:
-
-| Key | Default | What |
-|---|---|---|
-| `minPort` / `maxPort` | `3000` / `9999` | port window, which is what keeps `:53` and `:631` out |
-| `interval` | `10` | seconds between scans while collapsed |
-| `openInterval` | `2` | seconds between scans while the popup is open |
-| `httpsPorts` | `[]` | ports whose URL should be `https://` |
-
-Widget gestures:
-
-| Gesture | Action |
-|---|---|
-| left | popup: one row per port |
-| left on a row | open it as its own window |
-| left on a row's  | open it as a tab in the default browser |
-| middle | rescan now |
-
-The popup is also summonable, so it can take a keybind:
-`omarchy-shell shell toggle jonny.ports`.
-
-The widget hides itself when nothing is listening, so it costs no bar space on
-a machine that is not serving anything. It does still scan on the collapsed
-interval to know that — the count has to come from somewhere — but the scan is
-one `ss` call and a `readlink` per port, and it does not run per second.
-
-Each row opens two ways, because neither one is right for every server. The row
-itself runs `omarchy-launch-or-focus-webapp`, which gives the port a dedicated
-window with no tab strip and no address bar — right for a dashboard, wrong when
-you want devtools, and easily mistaken for a headless browser the first time it
-appears. The  button on the row runs `omarchy-launch-browser` instead, which
-is whatever `xdg-settings` calls the default browser, so the URL lands as an
-ordinary tab in the session you already have open.
-
-Two implementation notes. The row's full-width mouse area is declared *before*
-the button, because QML delivers a click to the last overlapping sibling, so the
-reverse order silently eats every button press. And the row highlight follows
-either area, since hovering the button leaves the row's own.
-
-### The keyboard picker
-
-`ports-tui.sh` is the same list without the mouse: `SUPER + ALT + P`, `j`/`k`
-to the row, `l`, and the terminal it ran in closes behind it. It starts in
-normal mode — see *Modal fzf* below, which is where the keys live — plus the
-two this list adds:
+The picker: `SUPER + ALT + P`, `j`/`k` to the row, `l`, and the terminal it ran
+in closes behind it. It starts in normal mode — see *Modal fzf* above, which is
+where the keys live — plus the two this list adds:
 
 | Key | Action |
 |---|---|
@@ -1036,11 +1000,11 @@ two this list adds:
 works in both modes, and it comes back as a tag on stdout by the same route
 `h` does.
 
-It is deliberately not a second implementation: `ports.sh` still owns the scan,
-and the picker is an fzf front end on the same TSV the widget draws. `fzf` and
-`jq` are both in Omarchy's own package set, so there is nothing to install.
+It is deliberately not a second implementation of the scan: `ports.sh` still
+owns that, and the picker only draws its TSV. `fzf` is in Omarchy's own package
+set, so there is nothing to install.
 
-Eight things that are the way they are for a reason:
+Seven things that are the way they are for a reason:
 
 - **`--app-id=TUI.float` is not cosmetic.** `omarchy-launch-tui` derives the
   app-id from the command name when you do not pass one, and Omarchy floats a
@@ -1062,9 +1026,9 @@ Eight things that are the way they are for a reason:
   left to kill. `exec`, `setsid --fork` and `systemd-run` (both `--service`
   and `--scope`) all fail identically: the fix is not detachment, it is that
   the spawning process must not be exiting. So the picker hands the command to
-  Hyprland — `hyprctl dispatch 'hl.dsp.exec_cmd("…")'` — which is the
-  script-reachable equivalent of the widget's `bar.run()`, whose spawner is the
-  long-lived omarchy-shell. Note the dispatcher name: `hyprctl dispatch exec`
+  Hyprland — `hyprctl dispatch 'hl.dsp.exec_cmd("…")'` — which is the one
+  long-lived process a script can reach. Note the dispatcher name:
+  `hyprctl dispatch exec`
   is no longer parsed by this Hyprland and returns a Lua syntax error with
   rc=7.
 - **The colours come from the theme.** `dot_config/omarchy/themed/fzf.env.tpl`
@@ -1091,12 +1055,6 @@ Eight things that are the way they are for a reason:
   listening", so on a desktop that message goes to
   `omarchy-notification-send`. Run from a shell with no Hyprland instance in
   the environment, it still prints.
-- **`minPort`, `maxPort` and `httpsPorts` are read from the widget's
-  `shell.json` entry**, with `jq`, rather than duplicated. A bar entry's own
-  keys *are* its settings — `entrySettings` in
-  `shell/plugins/bar/BarModel.js` strips only `id` — so both surfaces resolve
-  the same values, and configuring one configures both. Explicit arguments
-  (`ports-tui.sh 1024 65535`) still win, for use by hand.
 - **All three columns are visible, so all three are searchable.** Project
   directory, `:port`, and the process's own command line, one match space:
   typing `http.server 3222` crosses the argv and the port and narrows 3 rows to
@@ -1136,13 +1094,13 @@ root menu.
 | `dot_config/omarchy/themed/fzf.env.tpl` | `FZF_THEME_RED`, added for the line that says a drive is about to be erased |
 
 Rungs 2 and 3 of the extension ladder — a menu row and a chord, both handing a
-shell script to a floating terminal — and nothing lower. There is no bar
-widget: a stick is worth looking at in the moment you act on it and never in
-between, so the glanceable half that justifies `jonny.ports` costing a whole
-shell plugin does not exist here. The directory sits under `plugins/` for the
-namespace alone and deliberately has **no `manifest.json`**; the shell's
-manifest scan skips a directory without one (`[[ -f "$sub/manifest.json" ]] ||
-continue` in `PluginRegistry.qml`), so the two scripts cost the shell nothing.
+shell script to a floating terminal — and nothing lower, which is now also true
+of `jonny.ports`. There is no bar widget: a stick is worth looking at in the
+moment you act on it and never in between, and the same turned out to be true
+of a list of ports. The directory sits under `plugins/` for the namespace alone
+and deliberately has **no `manifest.json`**; the shell's manifest scan skips a
+directory without one (`[[ -f "$sub/manifest.json" ]] || continue` in
+`PluginRegistry.qml`), so the two scripts cost the shell nothing.
 
 ```bash
 ~/.config/omarchy/plugins/jonny.usb/usb.sh              # one TSV row per drive
