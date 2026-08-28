@@ -341,9 +341,14 @@ onto tmux's session/window/pane, the theme rides the terminal palette, and the
 `[ui]` block turns off the chrome tmux never drew (pane gaps, outer borders,
 scrollbars, close confirmations).
 
-The leader is `ctrl+a`, not herdr's default `ctrl+space`. Consequence: `ctrl+a`
-no longer reaches readline (`beginning-of-line`) or a nested tmux inside a
-herdr pane.
+`ui.status_indicators` is deliberately absent, which leaves it at herdr's
+default `"dots"` — the compact colour marks. It was briefly `"symbols"`, whose
+static per-state glyphs read as a dot that never changes and hid the fact that
+nothing was reporting state at all. See *Agent state* below.
+
+The leader is `ctrl+space`, not herdr's default `ctrl+b`, matching the
+`set -g prefix C-Space` in `tmux.conf`. Consequence: `ctrl+space` no longer
+reaches readline (`set-mark`) or a nested tmux inside a herdr pane.
 
 Workspace switching also answers `alt+j` / `alt+k` alongside `alt+down` /
 `alt+up`, so the motion keys match the vim-direction pane focus keys added to
@@ -358,6 +363,49 @@ are runtime state and stay out of the repo.
 herdr config check          # validate the file
 herdr server reload-config  # apply it to the running server, no restart
 ```
+
+### Agent state (`run_after_herdr-integrations.sh`)
+
+The coloured dot beside a workspace, tab and pane in the sidebar is the agent's
+state — idle, working, blocked, done — and herdr takes it from exactly one
+authority per agent. For most agents that authority is a screen manifest
+bundled in the binary: herdr matches the live bottom of the pane buffer against
+rules, so state works with nothing installed. **OMP has no manifest.** Its only
+authority is the lifecycle extension `herdr integration install omp` writes to
+`~/.omp/agent/extensions/herdr-omp-agent-state.ts`, and without it every OMP
+pane reports `idle` for its whole life — no colour change, ever, however busy
+the agent is.
+
+That is what `run_after_herdr-integrations.sh` installs. It checks
+`herdr integration status` on every apply and installs when the entry is
+missing or `--outdated-only` lists it, because the version that matters is
+herdr's and `herdr update` bumps it outside any apply.
+
+The extension is *not* a managed file next to `statusline.ts`, even though it
+lands in the same directory. Herdr rewrites it on upgrade, so a tracked copy
+would pin an old one and fight the installer.
+`dot_omp/private_agent/extensions/` is not an `exact_` directory, so chezmoi
+leaves the file alone.
+
+Only OMP is in the script's list. `herdr integration install` writes into the
+agent's own config tree; for claude, codex and opencode that tree is unmanaged
+here and those agents already have a working manifest, so their hooks would buy
+only native session restore in exchange for an unmanaged write. Add an agent to
+the list when that trade changes, not because its CLI is on PATH.
+
+The hook loads when the agent starts, so a pane that was already running keeps
+reporting whatever it reported before. Diagnose with:
+
+```bash
+herdr integration status         # per-agent: not installed / current (vN)
+herdr agent list                 # live state per pane
+herdr agent explain <pane_id>    # which authority decided it
+```
+
+`explain` is the one that answers this: `manifest: none` with
+`fallback_reason: default_known_agent_idle_fallback` means nothing is reporting,
+while `screen_detection_skip_reason: full_lifecycle_hook_authority` means the
+extension is live.
 
 ## Tmux
 

@@ -180,6 +180,17 @@ See `README.md` for the per-item detail. Summary:
   from 1Password with `op run` instead of a copy-pasted `.env`; it keys off the
   git remote so worktrees agree, and its per-repo templates live unmanaged in
   `~/.config/dev-env/` because an `op://` reference names the client (rule 7).
+- `dot_config/herdr/config.toml` + `run_after_herdr-integrations.sh` — herdr,
+  the terminal workspace manager, configured as a port of Omarchy's tmux config
+  (`ctrl+space` leader included) plus the script that installs herdr's OMP
+  lifecycle extension. OMP is the one agent herdr has no screen manifest for, so
+  without that extension every OMP pane reports `idle` for its whole life and
+  the sidebar's state dot never changes colour. The extension is herdr's file,
+  not a managed one — it lands in `dot_omp/private_agent/extensions/`'s target
+  directory, which is not `exact_`, so chezmoi leaves it alone. Diagnose with
+  `herdr agent explain <pane_id>`. Only `config.toml` is managed under
+  `~/.config/herdr/`; the session, lock, release-notes and log files there are
+  runtime state. Read the README before adding an agent to the script's list.
 - `dot_config/tmux/tmux.conf` — Omarchy's tmux config plus vim-direction pane
   focus keys (`Ctrl+Shift+h/j/k/l`) and the `extended-keys always` / `extkeys`
   settings those keys need to reach tmux at all. A whole-file copy, because
