@@ -57,12 +57,23 @@ ble-face syntax_error='fg=203'
 # shapes, synchronized updates, and kitty CSI-u key decoding.
 #
 # term_DA2R fires just after ble.sh parses the DA2 reply -- earlier than that
-# and detection overwrites this; later and the first prompt has already
-# chosen modifyOtherKeys.
+# and detection overwrites this.
+#
+# Rewriting the identity is not enough on its own: ble/term/DA2/notify has
+# already re-resolved the key protocol from the xterm identity by the time the
+# hook runs (it calls ble/term/modifyOtherKeys/reset just before invoking
+# term_DA2R), so the first prompt of a pane sits in modifyOtherKeys -- which
+# herdr ignores -- and Ctrl+; arrives as a bare `;`. It only healed on the
+# next prompt, because the leave/enter pair around a command re-resolves the
+# method and finds kitty by then. Hence the second reset below: it re-runs the
+# resolution against the identity this hook just wrote, so the protocol is
+# pushed before the first prompt is drawn. `reset` is a no-op when ble.sh has
+# not taken the terminal yet, and the enter at attach then picks kitty up.
 if [[ $HERDR_ENV ]]; then
   function ble/term/herdr-kitty-protocol.hook {
     _ble_term_TERM[0]=kitty:23
     _ble_term_DA2R[0]='1;4023;23'
+    ble/term/modifyOtherKeys/reset
   }
   blehook term_DA2R+=ble/term/herdr-kitty-protocol.hook
 fi

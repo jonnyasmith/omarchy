@@ -200,10 +200,23 @@ block, red-on-default instead of red-background for an unknown command,
 the wire. `Ctrl+;` needs a terminal keyboard protocol to be distinguishable at
 all: foot sends it as `\e[27;5;59~` once ble.sh asks for `modifyOtherKeys`, and
 tmux re-encodes it as `\e[59;5u` because `dot_config/tmux/tmux.conf` sets
-`extended-keys always`. Herdr drops the `Ctrl` off punctuation keys, so inside
-`h` only `Alt+;` accepts.
+`extended-keys always`.
 
-That last one restricts inline suggestions to shell history, matching zsh.
+Herdr needs the Kitty keyboard protocol specifically. It answers DA2 as a
+generic xterm, so ble.sh picks `modifyOtherKeys`, which herdr ignores — it
+only re-encodes a modified punctuation key for a pane that pushed `\e[>1u`,
+and `Ctrl+;` otherwise arrives as a bare `;`. `init.sh` therefore rewrites
+ble.sh's terminal identity to `kitty:23` on the `term_DA2R` hook, because that
+identity is the only input to the protocol choice and ble.sh exposes no
+override. The hook then has to call `ble/term/modifyOtherKeys/reset` itself:
+`ble/term/DA2/notify` resolves the protocol from the xterm identity *before*
+invoking `term_DA2R`, so without the second reset the first prompt of every
+new pane stayed on `modifyOtherKeys` and only the second one — after a command
+had run and the leave/enter pair around it re-resolved the method — accepted
+the key. That is what "`Ctrl+;` works sometimes" was.
+
+`complete_auto_complete_opts=syntax-disabled` restricts inline suggestions to
+shell history, matching zsh.
 ble.sh's extra `syntax` source guesses filenames *inside option clusters* —
 with it on, typing `echo -lR` next to a `README.md` ghosts `EADME.md` and
 Right-arrow inserts `echo -lREADME.md`. TAB completion is unaffected.
