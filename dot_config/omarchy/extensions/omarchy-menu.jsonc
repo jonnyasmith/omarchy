@@ -35,7 +35,7 @@
   // tool is one "plugins.<name>" line and nothing else has to change.
   // Its children stay searchable from the root -- SUPER + SPACE then "port"
   // still reaches the picker -- so the extra level costs nothing typed.
-  "plugins": {"icon":"\uf12e","label":"Plugins","description":"Personal tools: dev ports, USB drives"},
+  "plugins": {"icon":"\uf12e","label":"Plugins","description":"Personal tools: audio outputs, dev ports, USB drives"},
 
   // Dev ports: the same picker SUPER + ALT + P opens, for when the chord is
   // not in muscle memory yet. Same glyph as the bar widget (0xF048D).
@@ -47,5 +47,10 @@
   // a JSON \u escape rather than the character itself -- Nerd Font glyphs are
   // private-use codepoints, and an editor or a clipboard that does not know
   // that drops them silently.
-  "plugins.usb": {"icon":"\uf287","label":"USB drives","description":"Format a drive, write a bootable ISO, or power one off for safe removal","aliases":["usb","drives"],"action":"omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.usb/usb-tui.sh"}
+  "plugins.usb": {"icon":"\uf287","label":"USB drives","description":"Format a drive, write a bootable ISO, or power one off for safe removal","aliases":["usb","drives"],"action":"omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.usb/usb-tui.sh"},
+
+  // Audio outputs: local PipeWire sinks and network AirPlay receivers in one
+  // picker. A switch also moves streams already playing; r rebuilds AirPlay
+  // sinks after a receiver has dropped its RTSP session.
+  "plugins.audio": {"icon":"\uf028","label":"Audio output","description":"Switch system audio between local speakers, HomePods, and Apple TVs","aliases":["audio","airplay","homepod","speakers"],"action":"omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.audio/audio-tui.sh"}
 }

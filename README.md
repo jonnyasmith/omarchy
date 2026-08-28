@@ -46,19 +46,20 @@ What this repo is standing on:
 
 | Surface | Here |
 |---|---|
-| Menu row | `dot_config/omarchy/extensions/omarchy-menu.jsonc` — a *Plugins* container holding *Dev ports* and *USB drives* |
+| Menu row | `dot_config/omarchy/extensions/omarchy-menu.jsonc` — a *Plugins* container holding *Audio output*, *Dev ports* and *USB drives* |
 | Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + P`, `SUPER + ALT + U` |
 | Hooks (`theme-set.d`) | starship and omp theme bridges |
 | Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env}.tpl` |
-| Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.ports,jonny.usb}/` |
-| Shared picker library | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — modal fzf, sourced by both TUIs |
+| Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.audio,jonny.ports,jonny.usb}/` |
+| Shared picker library | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — modal fzf, sourced by all three TUIs |
 | Themes (overlay) | `dot_config/omarchy/themes/gruvbox/neovim.lua` |
 | Branding | `dot_config/omarchy/branding/` |
 | Hyprland overrides | `dot_config/hypr/{input,bindings}.lua` |
 | Whole-file copies (no override point) | `dot_config/tmux/tmux.conf`, `dot_config/foot/foot.ini` |
 
-Both tools sit on the same two rungs: a menu row and a chord, each handing a
-shell script to a floating terminal, with no manifest and no QML. `jonny.ports`
+Dev ports and USB drives sit on the same two rungs: a menu row and a chord, each
+handing a shell script to a floating terminal. Audio output uses only the
+cheapest rung, a searchable menu row. None needs a manifest or QML. `jonny.ports`
 used to be a full shell plugin as well — the most expensive rung — for a bar
 widget with a per-row click popup. The keyboard picker replaced it outright:
 the popup was a second implementation of a list you only ever want at the
@@ -114,7 +115,7 @@ leaving port 22 shut. Three scripts close that gap:
 
 | Script | Runs | Does |
 |---|---|---|
-| `run_once_before_00-packages.sh` | once per machine, before any file | `tailscale` + `tailscaled.service`, `blesh-git` from the AUR, adds you to the `docker` group |
+| `run_once_before_00-packages.sh` | once per machine, before any file | `tailscale` and `pipewire-zeroconf` from the repos, `tailscaled.service`, `blesh-git` from the AUR, adds you to the `docker` group |
 | `run_once_after_fingerprint-tod.sh` | once per machine, gated on the reader's USB ID | builds `libfprint-tod` and the matching TOD blob — the executable form of the AUR block in the fingerprint skill guide |
 | `run_onchange_after_mise.sh.tmpl` | when `dot_config/mise/config.toml` changes | `mise install` for the pinned tool set |
 
@@ -900,6 +901,7 @@ row per personal tool:
 "plugins":       {"icon":"\uf12e", "label":"Plugins"},          // no action ⇒ submenu
 "plugins.ports": {"icon":"󰒍", "label":"Dev ports",  "action":"…"},
 "plugins.usb":   {"icon":"\uf287", "label":"USB drives", "action":"…"},
+"plugins.audio": {"icon":"\uf028", "label":"Audio output", "action":"…"},
 ```
 
 - **The parent is inferred from the dotted id.** A row with no `action` is a
@@ -923,8 +925,8 @@ the same command, so nothing depends on where a row sits.
 ## Modal fzf
 
 `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — one `vfzf` function, sourced
-by both pickers, that makes fzf behave like a vim buffer: **no input line at
-all until you ask for one**. Bare `j`/`k` move, `l` opens, `h` goes back, and
+by all three pickers, that makes fzf behave like a vim buffer: **no input line
+at all until you ask for one**. Bare `j`/`k` move, `l` opens, `h` goes back, and
 `/` turns the list into a search box that `esc` closes again.
 
 | Normal mode | | Search mode | |
@@ -973,6 +975,51 @@ so binding `h` never steals it from the query line.
 `gg` is not a chord — fzf has no key sequences — but pressing `g` twice lands on
 the first row anyway, so the muscle memory survives. `i` is not bound: there is
 nothing to insert into a list.
+
+## Audio outputs
+
+*Audio output* under *Plugins* opens one modal picker for local PipeWire sinks,
+HomePods and Apple TVs:
+
+| Path | What |
+|---|---|
+| `dot_config/pipewire/pipewire-pulse.conf.d/50-raop-discover.conf` | loads AirPlay discovery without making PipeWire startup depend on the optional module |
+| `dot_config/omarchy/plugins/jonny.audio/executable_audio.sh` | joins PipeWire sinks to Avahi model/address metadata and prints TSV |
+| `dot_config/omarchy/plugins/jonny.audio/executable_audio-tui.sh` | selects the default sink, moves streams already playing, tests and rescans |
+| `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` | the same modal keys as the other pickers |
+| `dot_config/omarchy/extensions/omarchy-menu.jsonc` | the *Audio output* row, searchable as audio, AirPlay, HomePod or speakers |
+
+`pipewire-zeroconf` supplies `libpipewire-module-raop-discover`; Avahi is already
+running on Omarchy. Discovery loads through `pipewire-pulse` with `nofail`,
+rather than the stock mandatory `pipewire.conf.d` entry. Without the split
+package, that stock entry makes the PipeWire daemon exit 254 and takes every
+audio output down. The pulse-loaded module can also be unloaded and reloaded
+with `pactl`, which is what `r` does. That matters because
+`module-raop-sink` destroys one receiver sink after an RTSP failure and
+discovery does not recreate it while the same mDNS record remains present.
+
+Enter sets the selected sink as default **and moves every existing sink input**.
+Setting the default alone only affects applications that start playing later.
+`alt-t` sends the freedesktop test sound directly to the highlighted sink. `r`
+rebuilds every AirPlay sink from Avahi's cache.
+
+### HomePod access is an Apple setting
+
+The speakers can advertise `_raop._tcp` and appear in PipeWire while still
+rejecting Linux. Current HomePod firmware returns `RTSP/1.0 403 Forbidden` to
+the first `OPTIONS` request when Home access is restricted. PipeWire then
+removes the sink, while `pw-play` still exits zero; a visible row is therefore
+not proof that audio can play.
+
+The picker probes that endpoint before changing the default. A rejection leaves
+the working local output untouched and points to the setting:
+
+**Apple Home → Home Settings → Speakers & TV → Anyone on the Same Network**,
+with **Require Password** off.
+
+That setting applies to every HomePod in the home. Linux cannot perform initial
+HomePod setup, Bluetooth is not an audio route, and this is one receiver at a
+time rather than AirPlay 2 multi-room grouping.
 
 ## Dev ports
 

@@ -31,10 +31,11 @@ todo=()
 
 # --- Repo packages -----------------------------------------------------------
 
-# tailscale is the only one Omarchy does not already ship. Without it
-# run_after_sshd-tailnet.sh does nothing, and reachability over the tailnet is
-# the entire reason sshd is enabled on these machines.
-repo_pkgs=(tailscale)
+# Omarchy does not ship tailscale. It also installs PipeWire without the
+# Zeroconf split package that supplies libpipewire-module-raop-discover; the
+# audio picker needs that module before its nofail config can discover AirPlay
+# receivers.
+repo_pkgs=(tailscale pipewire-zeroconf)
 
 missing=()
 for pkg in "${repo_pkgs[@]}"; do
