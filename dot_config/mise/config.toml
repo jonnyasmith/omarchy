@@ -16,6 +16,7 @@ oh-my-pi = "latest"
 opencode = "latest"
 pnpm = ["11", "10"]
 python = ["3.14", "3.13"]
+superfile = "latest"
 uv = "latest"
 zig = "latest"
 
