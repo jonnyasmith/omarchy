@@ -128,17 +128,20 @@ See `README.md` for the per-item detail. Summary:
   entry means editing the file, then `omarchy restart shell`, which is also
   what any bar widget QML edit needs — a save alone is not enough.
 - `dot_config/omarchy/plugins/jonny.audio/` +
-  `dot_config/pipewire/pipewire-pulse.conf.d/50-raop-discover.conf` — audio
-  outputs: local PipeWire sinks and the HomePods and Apple TVs found over
-  AirPlay, in one floating picker. `audio.sh` joins `pactl` sinks to Avahi
-  model/address metadata; `audio-tui.sh` changes the default and moves streams
-  already playing. `alt-t` tests one receiver and `r` reloads the pulse-loaded
-  discovery module after PipeWire destroys a sink on an RTSP error. A direct
-  RTSP OPTIONS probe blocks a receiver returning 403 before it can strand the
-  default on a dead sink; Apple Home must allow speakers to *Anyone on the Same
-  Network* with no password. `pipewire-zeroconf` is a split package installed
-  by the packages script; `nofail` keeps its absence from taking all audio down.
-  See README before changing the discovery route or access probe.
+  `dot_config/pipewire/pipewire.conf.d/50-raop-discover.conf` +
+  `run_after_airplay-firewall.sh` — audio outputs: local PipeWire sinks and the
+  HomePods and Apple TVs found over AirPlay, in one floating picker. `audio.sh`
+  joins `pactl` sinks to Avahi model/address metadata; `audio-tui.sh` changes
+  the default and moves streams already playing. `alt-t` tests one receiver;
+  `r` restarts PipeWire to rebuild native discovery after an RTSP error. The
+  native `create-stream` rule is load-bearing: Pulse compatibility discovery
+  exposes selectable sinks but sends no sound. UDP 6001:6002 from the home
+  `/24` is also load-bearing: ufw otherwise lets OPTIONS and ANNOUNCE pass, then
+  SETUP hangs waiting for control/timing replies. A direct RTSP OPTIONS probe
+  blocks a receiver returning 403 before it can strand the default on a dead
+  sink; Apple Home must allow speakers to *Anyone on the Same Network* with no
+  password. `pipewire-zeroconf` is installed by the packages script. See README
+  before changing the discovery route, firewall rule or access probe.
 - `dot_config/omarchy/plugins/jonny.ports/` — dev ports: which local servers
   are listening, labelled from `/proc/<pid>/cwd` rather than the useless
   process name. `ports.sh` does the scanning and runs standalone; `ports-tui.sh`

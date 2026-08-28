@@ -983,7 +983,8 @@ for local PipeWire sinks, HomePods and Apple TVs:
 
 | Path | What |
 |---|---|
-| `dot_config/pipewire/pipewire-pulse.conf.d/50-raop-discover.conf` | loads AirPlay discovery without making PipeWire startup depend on the optional module |
+| `dot_config/pipewire/pipewire.conf.d/50-raop-discover.conf` | loads native AirPlay discovery with the required sink-creation rule |
+| `run_after_airplay-firewall.sh` | admits RAOP control and timing replies on UDP 6001:6002 from the home LAN |
 | `dot_config/omarchy/plugins/jonny.audio/executable_audio.sh` | joins PipeWire sinks to Avahi model/address metadata and prints TSV |
 | `dot_config/omarchy/plugins/jonny.audio/executable_audio-tui.sh` | selects the default sink, moves streams already playing, tests and rescans |
 | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` | the same modal keys as the other pickers |
@@ -991,18 +992,34 @@ for local PipeWire sinks, HomePods and Apple TVs:
 | `dot_config/hypr/bindings.lua` | `SUPER + ALT + A` opens the picker |
 
 `pipewire-zeroconf` supplies `libpipewire-module-raop-discover`; Avahi is already
-running on Omarchy. Discovery loads through `pipewire-pulse` with `nofail`,
-rather than the stock mandatory `pipewire.conf.d` entry. Without the split
-package, that stock entry makes the PipeWire daemon exit 254 and takes every
-audio output down. The pulse-loaded module can also be unloaded and reloaded
-with `pactl`, which is what `r` does. That matters because
-`module-raop-sink` destroys one receiver sink after an RTSP failure and
-discovery does not recreate it while the same mDNS record remains present.
+running on Omarchy. Discovery must load as a native PipeWire module with an
+explicit `create-stream` action. The PulseAudio compatibility module exposes
+the same sink names, so the picker looks correct, but it does not create a
+usable HomePod session: applications play and no sound leaves the machine.
+
+`r` restarts `pipewire.service`, which reloads native discovery and rebuilds
+every RAOP sink from Avahi's cache. PipeWire Pulse and WirePlumber reconnect to
+PipeWire's systemd socket. The rebuild matters because `module-raop-sink`
+destroys one receiver sink after an RTSP failure and discovery does not recreate
+it while the same mDNS record remains present.
 
 Enter sets the selected sink as default **and moves every existing sink input**.
 Setting the default alone only affects applications that start playing later.
 `alt-t` sends the freedesktop test sound directly to the highlighted sink. `r`
 rebuilds every AirPlay sink from Avahi's cache.
+
+### UDP replies must pass the firewall
+
+RAOP's RTSP connection is outbound, but its UDP setup advertises this machine's
+`control_port=6001` and `timing_port=6002`. HomePod sends setup traffic back to
+those ports. With ufw's default incoming policy, `OPTIONS` and `ANNOUNCE` both
+return 200, then `SETUP` hangs forever: the sink is selected and receives an
+application stream, but no sound plays.
+
+`run_after_airplay-firewall.sh` permits only UDP 6001:6002 from
+`192.168.86.0/24`, this house's LAN. It does not expose them on other private
+networks when the laptop travels. A working trace reaches `SETUP 200`,
+`RECORD 200`, then one `POST /feedback` every two seconds.
 
 ### HomePod access is an Apple setting
 

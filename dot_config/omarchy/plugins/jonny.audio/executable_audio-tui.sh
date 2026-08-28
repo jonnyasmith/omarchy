@@ -19,9 +19,9 @@
 # itself on any RTSP error (a device that hangs up, or refuses the session
 # outright), and module-raop-discover will not recreate it until the mDNS
 # service reappears -- which for a device that never left the network is never.
-# Reloading the discovery module rebuilds every raop sink from avahi's cache.
-# That is only cheap because discovery is loaded through pipewire-pulse rather
-# than the pipewire daemon; see ~/.config/pipewire/pipewire-pulse.conf.d/.
+# Native discovery is part of the PipeWire daemon, so rebuilding its sinks
+# requires restarting that daemon. PipeWire Pulse and WirePlumber reconnect to
+# its systemd socket; they do not need restarting.
 #
 # `--rows` is this script calling itself, so fzf's reload binding has a command
 # to re-run rather than an awk program quoted through two shells.
@@ -74,11 +74,10 @@ rows() {
 }
 
 if [[ ${1:-} == --rows ]]; then
-  # A rescan is a module reload plus the second or two avahi's answers take to
-  # come back; without the wait the redraw shows a shorter list than reality.
+  # Native module reload plus the second or two Avahi's answers take to come
+  # back; without the wait the redraw shows a shorter list than reality.
   if [[ ${2:-} == --rescan ]]; then
-    pactl unload-module module-raop-discover >/dev/null 2>&1
-    pactl load-module module-raop-discover >/dev/null 2>&1
+    systemctl --user restart pipewire.service
     sleep 2
   fi
   rows
