@@ -1,7 +1,8 @@
 # fzf palette for the active Omarchy theme. Rendered into
 # ~/.local/state/omarchy/current/theme/fzf.env by every `omarchy theme set`,
-# and sourced at run time by the scripts that want it -- currently the dev-ports
-# picker (`plugins/jonny.ports/ports-tui.sh`).
+# and sourced at run time by the scripts that want it -- the dev-ports picker
+# (`plugins/jonny.ports/ports-tui.sh`) and the USB drive picker
+# (`plugins/jonny.usb/usb-tui.sh`).
 #
 # Omarchy themes every TUI it ships but not fzf, so without this the picker is
 # fzf's stock 16-colour default in the middle of a themed desktop.
@@ -34,3 +35,8 @@ FZF_THEME_MUTED="{{ muted }}"
 # which is a border colour, not a text colour. A fixed mix is legible in every
 # theme because it is defined against that theme's own background.
 FZF_THEME_DIM="{{ mix background foreground 60% }}"
+
+# For the one thing a picker has to be able to say loudly: this next keystroke
+# erases a drive. The theme's own red, so a warning still reads as a warning
+# in a palette where the accent is itself reddish.
+FZF_THEME_RED="{{ red }}"

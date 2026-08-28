@@ -106,33 +106,25 @@ if [[ -z $listing ]]; then
   exit 0
 fi
 
-# Unquoted on purpose: one flag per word, and the rendered value has no spaces
-# in it. Empty when no theme has been rendered, which fzf reads as no flags.
-# shellcheck disable=SC2086
-selection=$(
-  printf '%s\n' "$listing" | fzf \
-    --ansi \
-    --delimiter=$'\t' \
-    --with-nth=1 \
-    --no-multi \
-    --cycle \
-    --layout=reverse \
-    --info=inline \
-    --height=100% \
-    --pointer='▌' \
-    --prompt='dev port  ' \
-    --header='enter open · alt-enter browser tab · ctrl-r rescan · esc quit' \
-    --bind="ctrl-r:reload($(printf '%q' "$self") --rows $min $max)" \
-    --expect=alt-enter \
-    $FZF_THEME_OPTS
-) || exit 0
+# Normal mode by default -- j/k move, l or enter opens, `/` searches -- out of
+# ../jonny.lib/vim-fzf.sh, so this picker and the USB one share one set of keys
+# and one implementation of them. alt-enter is a chord, so it works in both
+# modes and is bound here rather than there; it comes back as a tag on stdout
+# by the same route h does.
+# shellcheck source=../jonny.lib/vim-fzf.sh
+source "$here/../jonny.lib/vim-fzf.sh"
 
-# --expect puts the key on the first line, blank when it was plain enter.
-key=$(sed -n 1p <<<"$selection")
-line=$(sed -n 2p <<<"$selection")
+line=$(
+  printf '%s\n' "$listing" |
+    vfzf --ctx "$port_colour󰒍  dev port"$'\033[0m' \
+      --keys 'alt-enter browser tab · r rescan' -- \
+      --delimiter=$'\t' --with-nth=1 --info=inline-right \
+      --bind="r:reload($(printf '%q' "$self") --rows $min $max)" \
+      --bind='alt-enter:print(__vfzf:tab)+accept'
+) || exit 0
 [[ -n $line ]] || exit 0
 
-port=$(cut -f2 <<<"$line")
+port=$(vfzf_row "$line" | cut -f2)
 [[ $port =~ ^[0-9]+$ ]] || exit 1
 
 # Always localhost, never the address ss reported: Vite binds [::1] only, so a
@@ -157,7 +149,7 @@ url="$scheme://localhost:$port"
 # `exec_cmd` is the Lua dispatcher name -- `hyprctl dispatch exec <cmd>` is no
 # longer parsed by this Hyprland, it returns a Lua syntax error and rc=7. Both
 # arguments are built from a digits-only port, so the quoting is safe.
-if [[ $key == alt-enter ]]; then
+if [[ $(vfzf_tag "$line") == tab ]]; then
   command="omarchy-launch-browser $url"
 else
   command="omarchy-launch-or-focus-webapp localhost:$port $url"

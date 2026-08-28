@@ -28,10 +28,24 @@
   // fields are kept unless overridden.
   // "about": {"icon":"","label":"About","action":"omarchy-launch-or-focus-tui \"zsh -c 'fastfetch; read -k 1'\""},
 
+  // One container for everything in ~/.config/omarchy/plugins/, rather than a
+  // row per tool on the root menu: the root list is Omarchy's, and appending
+  // to it does not scale past two or three. A row with no `action` is a
+  // submenu, and the parent is inferred from the dotted id, so every future
+  // tool is one "plugins.<name>" line and nothing else has to change.
+  // Its children stay searchable from the root -- SUPER + SPACE then "port"
+  // still reaches the picker -- so the extra level costs nothing typed.
+  "plugins": {"icon":"\uf12e","label":"Plugins","description":"Personal tools: dev ports, USB drives"},
+
   // Dev ports: the same picker SUPER + ALT + P opens, for when the chord is
-  // not in muscle memory yet. Searchable from the root menu, so SUPER + SPACE
-  // then "port" reaches it. Same glyph as the bar widget (0xF048D).
+  // not in muscle memory yet. Same glyph as the bar widget (0xF048D).
   // TUI.float is the app-id Omarchy's window rules float; the one derived from
   // the script name is not, and the terminal would tile.
-  "ports": {"icon":"󰒍","label":"Dev ports","description":"Pick a listening local dev server and open it","aliases":["ports"],"action":"omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.ports/ports-tui.sh"}
+  "plugins.ports": {"icon":"󰒍","label":"Dev ports","description":"Pick a listening local dev server and open it","aliases":["ports"],"action":"omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.ports/ports-tui.sh"},
+
+  // USB drives: the same picker SUPER + ALT + U opens. The glyph is written as
+  // a JSON \u escape rather than the character itself -- Nerd Font glyphs are
+  // private-use codepoints, and an editor or a clipboard that does not know
+  // that drops them silently.
+  "plugins.usb": {"icon":"\uf287","label":"USB drives","description":"Format a drive, write a bootable ISO, or power one off for safe removal","aliases":["usb","drives"],"action":"omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.usb/usb-tui.sh"}
 }

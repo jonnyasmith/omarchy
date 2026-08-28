@@ -102,11 +102,19 @@ about to create it in `~`.
 See `README.md` for the per-item detail. Summary:
 
 - `dot_config/hypr/input.lua` — Hyprland input overrides (Caps Lock ⇄ Escape).
-- `dot_config/hypr/bindings.lua` — Omarchy's commented starter plus one
-  binding: `SUPER + ALT + P` opens the dev-ports picker. The description
-  argument is what `omarchy menu keybindings` renders, so never omit it.
-- `dot_config/omarchy/extensions/omarchy-menu.jsonc` — the starter plus one
-  root row, *Dev ports*, opening the same picker. Hot-reloads on save.
+- `dot_config/hypr/bindings.lua` — Omarchy's commented starter plus two
+  bindings: `SUPER + ALT + P` opens the dev-ports picker and
+  `SUPER + ALT + U` the USB-drive picker. The description argument is what
+  `omarchy menu keybindings` renders, so never omit it.
+- `dot_config/omarchy/extensions/omarchy-menu.jsonc` — the starter plus a
+  *Plugins* container (a row with no `action` is a submenu; the parent comes
+  from the dotted id) holding *Dev ports* and *USB drives*. Every new personal
+  tool is one `plugins.<name>` line; nothing goes on the root menu, which is
+  Omarchy's and appends user rows to the bottom. Search and `aliases` still
+  reach the children, so nesting costs nothing typed. Hot-reloads on save;
+  `omarchy menu summon plugins` checks a change parsed without running a row.
+  Glyphs are `\u` escapes: they are private-use codepoints and a literal one is
+  easy to lose in transit.
 - `dot_config/omarchy/shell.json` — the bar layout and the `idle` screensaver
   and lock timeouts. Stock apart from the widget order and the `jonny.ports`
   entry. Bar widget QML edits need `omarchy restart shell`, not just a save.
@@ -122,9 +130,35 @@ See `README.md` for the per-item detail. Summary:
   custom TUI needs `--app-id=TUI.float` to float at all, and it must hand the
   browser launch to Hyprland (`hl.dsp.exec_cmd`) rather than run it, because a
   process that is about to exit cannot spawn one — see README.
+- `dot_config/omarchy/plugins/jonny.usb/` — USB drives: format one, write a
+  bootable ISO to one, or power one off for safe removal. `usb.sh` decides what
+  a removable drive is (removable bit *or* USB transport, minus anything
+  carrying a system mount) and prints TSV; `usb-tui.sh` is the fzf picker plus
+  the three actions. No `manifest.json` — this is not a shell plugin, and the
+  shell's scan skips a directory without one. Unmount, format and power-off go
+  through udisks over D-Bus, which needs no password for a local session; only
+  the image write is `sudo dd`, because no unprivileged route into a raw block
+  device exists from a shell. Every destructive action is confirmed by typing
+  the device name, and re-checks that nothing is mounted because
+  `udiskie --automount` will have remounted it — see README.
+- `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — `vfzf`, the modal fzf
+  both pickers source, so their keys cannot drift: normal mode by default, no
+  input line at all, `j`/`k` move, `l` or enter opens, `h` goes back, `/` opens
+  a search box, esc closes it. The footer is the mode line and changes with the
+  mode. Sourced, not run, so no `executable_` prefix. Four things to know
+  before editing it: `--no-input` is what frees bare letters to be keys; the
+  bare keys are unbound on entering search and rebound on leaving, from one
+  list; esc is a `transform` on `$FZF_INPUT_STATE` because it means two
+  different things; and `clear-query` must lead that chain from *outside* the
+  transform, because an action list that hides the input discards a query
+  change emitted after it — which leaves normal mode filtered with no visible
+  input line. Back is `print(sentinel)+accept`, never `--expect` (which would
+  capture the key in search mode too) and never `+abort` (which drops the
+  output queue). Read the README section before changing any of it.
 - `dot_config/omarchy/themed/fzf.env.tpl` — the fzf palette, rendered per
-  theme and sourced by the picker at launch. No `theme-set.d` hook: the
-  consumer reads the state dir directly.
+  theme and sourced by both pickers at launch, `FZF_THEME_RED` included for the
+  USB picker's erase warning. No `theme-set.d` hook: the consumer reads the
+  state dir directly.
 - `dot_bashrc` + `dot_config/blesh/init.sh` + `dot_config/bash/` — ble.sh (the
   zsh-autosuggestions equivalent), its settings, its fzf/zoxide integrations,
   and the aliases ported from the old zsh setup. Requires `yay -S blesh-git`;

@@ -46,12 +46,13 @@ What this repo is standing on:
 
 | Surface | Here |
 |---|---|
-| Menu row | `dot_config/omarchy/extensions/omarchy-menu.jsonc` — *Dev ports* |
-| Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + P` |
+| Menu row | `dot_config/omarchy/extensions/omarchy-menu.jsonc` — a *Plugins* container holding *Dev ports* and *USB drives* |
+| Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + P`, `SUPER + ALT + U` |
 | Hooks (`theme-set.d`) | starship and omp theme bridges |
 | Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env}.tpl` |
 | Shell plugin (`bar-widget`) | `dot_config/omarchy/plugins/jonny.ports/` |
-| Bar layout + idle | `dot_config/omarchy/shell.json` |
+| Floating TUI, no plugin | `dot_config/omarchy/plugins/jonny.usb/` |
+| Shared picker library | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — modal fzf, sourced by both TUIs |
 | Themes (overlay) | `dot_config/omarchy/themes/gruvbox/neovim.lua` |
 | Branding | `dot_config/omarchy/branding/` |
 | Hyprland overrides | `dot_config/hypr/{input,bindings}.lua` |
@@ -59,7 +60,10 @@ What this repo is standing on:
 
 `jonny.ports` is a full shell plugin, the most expensive rung, and legitimately
 so: it needs a popup with per-row click targets. The same information as a
-*count* would have been a twenty-line command module.
+*count* would have been a twenty-line command module. `jonny.usb` is the
+counterexample from the other direction: two scripts and two one-line surfaces,
+no manifest and no QML, because a USB stick is only ever interesting in the
+moment you act on it.
 
 ## New Machine
 
@@ -791,6 +795,89 @@ Two things to know when editing any bar widget:
   by `omarchy bar move`, so expect it to drift; re-`chezmoi add` after
   deliberate layout changes.
 
+## Menu extensions
+
+`dot_config/omarchy/extensions/omarchy-menu.jsonc` holds one container and one
+row per personal tool:
+
+```jsonc
+"plugins":       {"icon":"\uf12e", "label":"Plugins"},          // no action ⇒ submenu
+"plugins.ports": {"icon":"󰒍", "label":"Dev ports",  "action":"…"},
+"plugins.usb":   {"icon":"\uf287", "label":"USB drives", "action":"…"},
+```
+
+- **The parent is inferred from the dotted id.** A row with no `action` is a
+  submenu, so `plugins` is the whole container and every future tool is one
+  `plugins.<name>` line with nothing else to wire.
+- **Why not the root menu.** User rows are merged *after* Omarchy's, so each
+  one lands at the bottom of a list that is Omarchy's own — fine for one, wrong
+  by three. Nesting costs nothing typed: search reaches into submenus, so
+  `SUPER + SPACE` then "port" still lands on the picker, and `aliases` keep
+  `omarchy menu summon usb` working from the old flat id.
+- **Glyphs are `\u` escapes**, not literal characters. Nerd Font glyphs are
+  private-use codepoints and every hop — editor, clipboard, terminal — is a
+  chance to drop one silently. `\uf12e` is the puzzle piece on the container.
+- **It hot-reloads on save**; `omarchy menu summon plugins` is the fast check
+  that a change parsed, and it opens the submenu without running anything.
+  Summoning a *leaf* runs that row's action, which is a slower way to find out.
+
+The chords in `dot_config/hypr/bindings.lua` bypass the menu entirely and run
+the same command, so nothing depends on where a row sits.
+
+## Modal fzf
+
+`dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — one `vfzf` function, sourced
+by both pickers, that makes fzf behave like a vim buffer: **no input line at
+all until you ask for one**. Bare `j`/`k` move, `l` opens, `h` goes back, and
+`/` turns the list into a search box that `esc` closes again.
+
+| Normal mode | | Search mode | |
+|---|---|---|---|
+| `j` / `k` | move | type | filter |
+| `g` / `G` | first / last row | `ctrl-j` / `ctrl-k` | move |
+| `ctrl-d` / `ctrl-u` | half page | `enter` | open |
+| `l` or `enter` | open, or a level down | `esc` | back to normal mode |
+| `h` | a level up | | |
+| `/` | search | | |
+| `q` or `esc` | quit | | |
+
+The footer is the mode line: it lists the keys that work *now*, and changes
+with the mode, so nothing has to be remembered or guessed. Each caller adds its
+own fragment to it (`r rescan`, `alt-enter browser tab`) and says whether `h
+back` is a lie at that level.
+
+fzf has no notion of a mode, so this is five specific mechanisms:
+
+- **`--no-input` is the whole trick.** It hides the input line *and* stops
+  keystrokes reaching the query, which is what frees bare letters to be bound
+  as commands; `show-input` brings it back for `/`. Without it, `j` types a `j`.
+- **Bare keys are `unbind`-ed on entering search and `rebind`-ed on leaving
+  it**, from a single list, so a key added to normal mode cannot be left typing
+  itself into a search. Chords — `ctrl-j`, `ctrl-k`, `alt-enter` — stay bound in
+  both modes, which is what makes movement possible *while* filtering.
+- **`esc` has to mean two things**, so it is a `transform` that reads
+  `FZF_INPUT_STATE`: `hidden` means normal mode, so quit; anything else means
+  search mode, so return to normal.
+- **`clear-query` must lead that chain, outside the transform.** An fzf action
+  list that hides the input silently discards a query change emitted after it —
+  in either order, tested on 0.74.3. Get this wrong and normal mode is still
+  filtered by a pattern with no visible input line to explain why, which looks
+  exactly like a list that has lost half its rows.
+- **Going back is `print(sentinel)+accept`, not `--expect`.** `--expect`
+  captures its key in *both* modes, so `--expect=h` would stop `h` ever being
+  typed into a search. `print` needs `accept` rather than `abort`: abort throws
+  the output queue away, so the sentinel never arrives. The tag is read back off
+  stdout because a function at the far end of a pipe, inside a command
+  substitution, cannot set a variable its caller will ever see.
+
+Left alone deliberately: `ctrl-c` and `ctrl-g` still abort, because every
+terminal user has that reflex; and Backspace is `0x7f` while `ctrl-h` is `0x08`,
+so binding `h` never steals it from the query line.
+
+`gg` is not a chord — fzf has no key sequences — but pressing `g` twice lands on
+the first row anyway, so the muscle memory survives. `i` is not bound: there is
+nothing to insert into a list.
+
 ## Dev ports
 
 A list of the local dev servers that are actually listening, labelled by the
@@ -802,11 +889,13 @@ in the browser.
 | `dot_config/omarchy/plugins/jonny.ports/executable_ports.sh` | the whole scan; usable on its own |
 | `dot_config/omarchy/plugins/jonny.ports/` | the bar widget (`manifest.json` + `BarWidget.qml`) |
 | `dot_config/omarchy/plugins/jonny.ports/executable_ports-tui.sh` | the keyboard picker, an fzf front end on the same scan |
+| `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` | the modal keys, shared with the USB picker |
 | `dot_config/hypr/bindings.lua` | `SUPER + ALT + P` opens the picker |
-| `dot_config/omarchy/extensions/omarchy-menu.jsonc` | the *Dev ports* row that opens the same picker |
+| `dot_config/omarchy/extensions/omarchy-menu.jsonc` | the *Dev ports* row, under *Plugins* |
 
-Both of those last two files are managed for this one entry each; they are
-otherwise Omarchy's own commented starter files.
+Those last two files are managed for one entry each; they are otherwise
+Omarchy's own commented starter files. See *Menu extensions* above for why the
+row is not on the root menu.
 
 ```bash
 ~/.config/omarchy/plugins/jonny.ports/ports.sh          # 3000-9999
@@ -884,16 +973,21 @@ either area, since hovering the button leaves the row's own.
 
 ### The keyboard picker
 
-`ports-tui.sh` is the same list without the mouse: `SUPER + ALT + P`, arrow or
-type to the row, `enter`, and the terminal it ran in closes behind it.
+`ports-tui.sh` is the same list without the mouse: `SUPER + ALT + P`, `j`/`k`
+to the row, `l`, and the terminal it ran in closes behind it. It starts in
+normal mode — see *Modal fzf* below, which is where the keys live — plus the
+two this list adds:
 
 | Key | Action |
 |---|---|
-| type | fuzzy filter across all three columns — project, port, command line |
-| `enter` | open as its own window (`omarchy-launch-or-focus-webapp`) |
+| `l` or `enter` | open as its own window (`omarchy-launch-or-focus-webapp`) |
 | `alt-enter` | open as an ordinary browser tab (`omarchy-launch-browser`) |
-| `ctrl-r` | rescan |
-| `esc` | quit, having done nothing |
+| `r` | rescan |
+| `/` | search across all three columns — project, port, command line |
+
+`alt-enter` is bound here rather than in the library because it is a chord: it
+works in both modes, and it comes back as a tag on stdout by the same route
+`h` does.
 
 It is deliberately not a second implementation: `ports.sh` still owns the scan,
 and the picker is an fzf front end on the same TSV the widget draws. `fzf` and
@@ -978,6 +1072,164 @@ Eight things that are the way they are for a reason:
 `SUPER + P` is *Pseudo window*. Check with `omarchy menu keybindings --print`
 before taking a chord, and note that the description argument to `o.bind` is
 what that list renders — an undescribed bind is an invisible one.
+
+## USB drives
+
+Pick an attached removable drive, then power it off for safe removal, reformat
+it, or write a bootable ISO to it. `SUPER + ALT + U`, or *USB drives* from the
+root menu.
+
+| Path | What |
+|---|---|
+| `dot_config/omarchy/plugins/jonny.usb/executable_usb.sh` | the whole scan; usable on its own |
+| `dot_config/omarchy/plugins/jonny.usb/executable_usb-tui.sh` | the picker and the three actions |
+| `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` | the modal keys, shared with the dev-ports picker |
+| `dot_config/hypr/bindings.lua` | `SUPER + ALT + U` opens it |
+| `dot_config/omarchy/extensions/omarchy-menu.jsonc` | the *USB drives* row, under *Plugins* |
+| `dot_config/omarchy/themed/fzf.env.tpl` | `FZF_THEME_RED`, added for the line that says a drive is about to be erased |
+
+Rungs 2 and 3 of the extension ladder — a menu row and a chord, both handing a
+shell script to a floating terminal — and nothing lower. There is no bar
+widget: a stick is worth looking at in the moment you act on it and never in
+between, so the glanceable half that justifies `jonny.ports` costing a whole
+shell plugin does not exist here. The directory sits under `plugins/` for the
+namespace alone and deliberately has **no `manifest.json`**; the shell's
+manifest scan skips a directory without one (`[[ -f "$sub/manifest.json" ]] ||
+continue` in `PluginRegistry.qml`), so the two scripts cost the shell nothing.
+
+```bash
+~/.config/omarchy/plugins/jonny.usb/usb.sh              # one TSV row per drive
+~/.config/omarchy/plugins/jonny.usb/usb-tui.sh          # pick a drive, then an action
+~/.config/omarchy/plugins/jonny.usb/usb-tui.sh /dev/sdb # skip the picker
+```
+
+`usb.sh` prints `device`, label, detail and owns every awkward part of deciding
+what a removable drive is; the picker only draws that TSV, exactly as
+`ports.sh` and the dev-ports front ends split the work.
+
+### Walking the tree
+
+Three levels — drive, then action, then filesystem or image — and every level
+is the same modal fzf with the same keys, described once under *Modal fzf*
+above. `l` or `enter` goes down, `h` comes back up, `r` rescans the drive list.
+Going *down* is a keypress on a list rather than a chord on the drive list: a
+chord that erases a drive is a chord pressed by accident.
+
+Two things the tree itself had to get right:
+
+- **One wrapper, three outcomes.** `vfzf` returns 0 with the row, 2 for back,
+  1 for quit; the drive list folds 2 into 1 because there is nothing above it,
+  and a submenu folds 2 into "return to the action menu".
+- **A cancelled submenu must not pause.** Every action that *ran* ends with
+  "press any key", because `dd` output is the whole point of running it. A
+  submenu backed out of has nothing to read, and pausing there swallowed the
+  next keystroke — which is usually the next `h`. Hence the distinct return
+  code rather than a bare `|| return 0`.
+
+A drive unplugged between the scan and the keypress sends the picker round to
+rescan, with a notification, rather than exiting: that is a stale row, not a
+broken script. A device named on the command line is different — it is a typo
+worth an error, and that mode drops `h back` from the footer and quits instead,
+because the picker never ran and there is no level to go back to.
+
+### What counts as a removable drive
+
+Whole disks only — you mount a partition, but format, image-write and power-off
+all act on the drive — and three tests, because no one of them is enough:
+
+- `rm`, the kernel's removable-media bit. A USB SSD in a bridge enclosure
+  reports `0`.
+- `tran == "usb"`, which catches those, and misses a card reader behind some
+  controllers.
+- **and then a veto:** any drive carrying `/`, `/boot`, `/home`, `/var/…` or
+  swap anywhere in its tree is dropped, however removable it claims to be.
+  Every entry in this menu destroys data, so a misreported internal disk must
+  not be able to reach it. `zram0` fails the first two tests and loop devices
+  are `type: loop`, so neither needs naming.
+
+### Privilege: udisks for three things, sudo for one
+
+Unmount, format and power-off go over D-Bus to **udisks**, whose polkit actions
+are `implicit active: yes` for a local logged-in session
+(`pkaction --verbose --action-id org.freedesktop.udisks2.modify-device`), so
+the everyday path asks for no password at all. `udisksctl` has verbs for
+unmount and power-off; formatting does not exist there, so the script calls
+`Block.Format` and `PartitionTable.CreatePartitionAndFormat` directly with
+`gdbus` — the same pair GNOME Disks uses, which means udisks does the partition
+alignment, the MBR type byte and the ext4 ownership fixup rather than a hand-
+rolled `wipefs`/`sfdisk`/`mkfs` pipeline.
+
+Writing an image is the exception: `sudo dd`. The only unprivileged route into
+a raw block device is a file descriptor handed back over D-Bus
+(`Block.OpenForRestore`), and a shell cannot receive one. The floating terminal
+is visible, which is exactly when the omarchy skill says to use `sudo` rather
+than `pkexec` — and on this machine the prompt is the fingerprint reader first,
+password second, because of the PAM stack `run_after_omarchy-fingerprint-pam.sh`
+restores.
+
+### The three actions
+
+| Action | What happens |
+|---|---|
+| Power off | unmount every partition, then `udisksctl power-off -b`, then a notification saying it is safe to unplug |
+| Format | one partition filling the drive, `vfat`, `exfat` or `ext4`, labelled, mounted when it is done |
+| Write image | `sudo dd … bs=4M oflag=direct conv=fsync`, then an offer to power the drive off |
+
+Format writes MBR below 2 TiB and GPT above it: MBR is the table a camera, a
+car stereo and an old Windows box can all read, and above 2 TiB it cannot
+address the sectors. `update-partition-type` sets the type byte from the
+filesystem (`0x0c` FAT32 LBA, `0x07` exFAT, `0x83` Linux) and `take-ownership`
+chowns a fresh ext4 root to you, which is the difference between a usable stick
+and a read-only one. Label limits are checked *before* anything is written —
+11 characters for vfat, 15 for exfat, 16 for ext4 — because udisks validates on
+the second call, by which point the partition table has been rewritten and the
+drive is empty. Labels are also restricted to letters, digits, space, dot, dash
+and underscore, which is both what all three filesystems accept and what is
+safe to interpolate into a GVariant dictionary.
+
+The image picker lists `*.iso` and `*.img` two deep in `~/Downloads`,
+`~/Desktop`, `~/Documents`, `~/iso`, `~/isos` and `~/Images`, newest first,
+with a *type a path instead…* row for anything elsewhere. It refuses an image
+larger than the drive before touching it, and a hybrid ISO is written raw,
+which is what those ISOs are built for.
+
+### Six things that are the way they are for a reason
+
+- **The window stays open, so this is not a `--expect` picker.** `dd` prints
+  progress for minutes and every destructive action asks to be confirmed, so
+  the actions are a second fzf list rather than keys on the first one: a chord
+  that erases a drive is a chord pressed by accident. The dev-ports rule about
+  a dying process being unable to spawn therefore does not apply here — nothing
+  is exiting — but `--app-id=TUI.float` still is passed from both surfaces, or
+  the terminal opens tiled. `omarchy-launch-tui`, not `or focus`: `TUI.float`
+  is shared by every floating TUI, so `or focus` raises whichever one is
+  already open.
+- **The confirmation is the drive's own name, typed.** `sdb`, not `y`. It is
+  the moment "the second one down" becomes a device node in the reader's head,
+  and it is the last thing standing between a menu row and someone's photos.
+- **`udiskie --automount` is running, and it re-mounts a partition the second
+  it appears.** So every destructive path unmounts and then *checks*, up to
+  three times, and aborts if anything is still mounted: udisks refuses to wipe
+  a busy device, and finding that out halfway through leaves a drive with a
+  partition table and no filesystem.
+- **`lsblk -l` and `-r` cannot be combined.** `lsblk -lnro MOUNTPOINTS` exits
+  with an error, which a `grep -q` swallowed into "nothing is mounted" — the
+  mount check passed, the format then failed with `Device or resource busy`,
+  and the cause was two flags. It is `-lnpo MOUNTPOINTS` plus a
+  `[^[:space:]]` test, because that column is space-padded.
+- **Nerd Font glyphs are written as escapes.** `$'\uf287'` in bash and
+  `"\uf287"` in the JSONC row, not the characters themselves: they are
+  private-use codepoints, and every hop between an editor, a clipboard and a
+  file is a chance to drop one silently and leave a blank icon column.
+- **A failed write says so in full.** A non-zero `dd` covers both sudo
+  refusing the password, where nothing was written, and `dd` stopping part way,
+  where the drive holds neither its old filesystem nor a bootable image. The
+  message names that state rather than printing an error code, because the
+  wrong thing to read at that point is "it is fine".
+
+`SUPER + ALT + U` was free — check with `omarchy menu keybindings --print`
+before taking a chord — and the description argument to `o.bind` is what that
+list renders.
 
 ## Omarchy agent skill: fingerprint guide
 

@@ -39,3 +39,14 @@ o.bind(
   "Dev ports",
   "omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.ports/ports-tui.sh"
 )
+
+-- USB drives: format, write a bootable image, or power one off for removal.
+-- Same TUI.float reasoning as above. This picker deliberately stays open --
+-- dd prints progress for minutes -- so it is a plain `launch tui` rather than
+-- `launch or focus tui`, whose app-id match would raise whichever floating
+-- TUI happened to be open already.
+o.bind(
+  "SUPER + ALT + U",
+  "USB drives",
+  "omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.usb/usb-tui.sh"
+)
