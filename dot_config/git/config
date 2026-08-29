@@ -88,3 +88,19 @@
 # reason as above — `...azure.com:**` matches nothing and fails silently.
 [includeIf "hasconfig:remote.*.url:git@ssh.dev.azure.com:v3/**"]
 	path = config.work
+
+# GitHub HTTPS credentials come from `gh auth login`, which appends exactly
+# these two blocks to whatever git config it finds and would therefore be
+# wiped by the next `chezmoi apply`. The empty `helper =` first resets any
+# helper inherited from /etc, as gh writes it.
+#
+# gh is a mise tool, so the path it wrote pinned the installed version
+# (.../installs/gh/2.98.0/...) and would break on the next `mise upgrade`.
+# The shim is the stable entry point, and unlike a bare `gh` it also resolves
+# for a git run outside an activated shell (a GUI client, a hook).
+[credential "https://github.com"]
+	helper = 
+	helper = !~/.local/share/mise/shims/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !~/.local/share/mise/shims/gh auth git-credential
