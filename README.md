@@ -1586,13 +1586,13 @@ Three deliberate choices there:
 
 Read a markdown file, mermaid diagrams included, in a Chromium app window
 Hyprland tiles beside the terminal. `mdp` from a shell, `<Leader>mp` from
-Neovim.
+Neovim — from a buffer, or from a neo-tree node, which never opens the file.
 
 | Path | Job |
 |---|---|
 | `dot_config/omarchy/plugins/jonny.mdpreview/mdpreview.sh` | the whole implementation: find or start a server, open or focus the window |
 | `dot_config/bash/mdpreview.sh` | the `mdp` function and its completion |
-| `dot_config/nvim/lua/plugins/mdpreview.lua` | `<Leader>mp`, which writes the buffer and calls the same script |
+| `dot_config/nvim/lua/plugins/mdpreview.lua` | `<Leader>mp` in a buffer and in neo-tree, both calling the same script |
 | `dot_config/mise/config.toml` | the pinned `go-grip` that does the rendering |
 
 ```
@@ -1600,6 +1600,32 @@ mdp             preview ./README.md
 mdp <file.md>   preview a file, or focus its window if it is already open
 mdp --stop      stop every preview server
 ```
+
+### The same chord in neo-tree
+
+Browsing a tree and wanting to *look* at a document is not wanting to edit it,
+so the tree entrypoint opens no buffer: the path comes from the node, goes
+straight to the launcher, and the file list stays exactly as it was.
+
+`<Leader>mp` is deliberately the same chord as in a buffer. Neo-tree registers
+its `window.mappings` as buffer-local keymaps (`renderer.lua` calls
+`keymap.set(state.bufnr, …)`), so inside the tree the local mapping shadows the
+global one — which it has to, because the global one reads the *current* buffer
+and the tree buffer has no file name.
+
+Three details in `mdpreview.lua`:
+
+- **The node is `state.tree:get_node()`**, the pattern every command in
+  neo-tree's own `sources/common/commands.lua` uses. Its `type` is checked
+  against `"file"` first: a directory row and neo-tree's `"message"` rows both
+  reach the handler, and neither has a previewable path.
+- **Nothing else is validated here.** Existence and the `.md` suffix are the
+  launcher's rules already, and its stderr is surfaced by the same `vim.notify`
+  the buffer path uses. A second copy of those checks would drift.
+- **A dirty buffer is written by handle, not by `:w`.** The tree path may be
+  open, unsaved, in a window that is not the current one, and go-grip previews
+  what is on disk — so `write_if_dirty` finds the loaded buffer for that exact
+  name and writes *it* through `nvim_buf_call`.
 
 ### Why this is not in the terminal
 

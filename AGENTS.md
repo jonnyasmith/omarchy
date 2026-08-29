@@ -202,12 +202,15 @@ See `README.md` for the per-item detail. Summary:
   `dot_config/bash/mdpreview.sh` + `dot_config/nvim/lua/plugins/mdpreview.lua` —
   markdown preview: read a file, mermaid included, in a Chromium app window
   Hyprland tiles beside the terminal. `mdp` from a shell, `<Leader>mp` from
-  Neovim, both calling the one script, so a document cannot look different
-  depending on which side opened it. Alone among these tools it sits on no
-  Omarchy rung: it needs a file path, and neither a menu row nor a chord can
-  supply one. It is in the terminal nowhere because it cannot be — foot speaks
-  sixel, herdr composites panes to a character grid with no sixel path, and the
-  two do not overlap, so no image protocol reaches the screen from a pane.
+  Neovim — from a buffer, or from a neo-tree node, where the same chord is a
+  buffer-local mapping that shadows it and previews the node's path without
+  opening the file — all calling the one script, so a document cannot look
+  different depending on which side opened it. Alone among these tools it sits
+  on no Omarchy rung: it needs a file path, and neither a menu row nor a chord
+  can supply one. It is in the terminal nowhere because it cannot be — foot
+  speaks sixel, herdr composites panes to a character grid with no sixel path,
+  and the two do not overlap, so no image protocol reaches the screen from a
+  pane.
   Rendering is `go-grip`, pinned in `dot_config/mise/config.toml` to a commit
   rather than a release because `frontmatter.Extract` landed after `v0.9.2` and
   57% of the markdown under `~/dev` is frontmatter-headed. Four load-bearing
