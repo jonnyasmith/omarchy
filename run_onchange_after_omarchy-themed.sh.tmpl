@@ -3,28 +3,31 @@
 # Re-renders the omarchy theme templates this repo owns, and fires the theme-set
 # hooks that push the results where the apps read them:
 #
-#   omp.json.tpl      -> ~/.omp/agent/themes/omarchy-system.json  (omp-theme.hook)
-#   starship.toml.tpl -> current/theme/starship.toml              (starship-theme.hook)
-#   fzf.env.tpl       -> current/theme/fzf.env                    (no hook)
+#   omp.json.tpl         -> ~/.omp/agent/themes/omarchy-system.json (omp-theme.hook)
+#   starship.toml.tpl    -> current/theme/starship.toml             (starship-theme.hook)
+#   fzf.env.tpl          -> current/theme/fzf.env                   (no hook)
+#   skills-sync.env.tpl  -> current/theme/skills-sync.env           (no hook)
 #
-# fzf.env needs no hook because nothing has to be copied or signalled: the
-# dev-ports picker sources the rendered file out of the state dir at launch,
-# the way dot_bashrc points STARSHIP_CONFIG at one. A hook exists only when the
-# app reads somewhere else.
+# fzf.env and skills-sync.env need no hook because nothing has to be copied or
+# signalled: the pickers and the skills launcher source the rendered file out of
+# the state dir at launch, the way dot_bashrc points STARSHIP_CONFIG at one. A
+# hook exists only when the app reads somewhere else.
 #
 # A template only renders inside `omarchy theme set`, which writes every
 # ~/.config/omarchy/themed/*.tpl into the current-theme state dir and then runs
 # the theme-set hooks. So a fresh machine and an edited template both need one
 # re-apply to converge; the theme-set.d hooks handle every switch after that.
 #
-# run_onchange_, keyed on the five files below, so a plain `chezmoi apply` does
-# not re-apply the theme on every run.
+# run_onchange_, keyed on the six files below, so a plain `chezmoi apply` does
+# not re-apply the theme on every run. A template missing from this list is
+# never rendered until some other one changes.
 #
 # omp.json.tpl: {{ include "dot_config/omarchy/themed/omp.json.tpl" | sha256sum }}
 # omp-theme.hook: {{ include "dot_config/omarchy/hooks/theme-set.d/executable_omp-theme.hook" | sha256sum }}
 # starship.toml.tpl: {{ include "dot_config/omarchy/themed/starship.toml.tpl" | sha256sum }}
 # starship-theme.hook: {{ include "dot_config/omarchy/hooks/theme-set.d/executable_starship-theme.hook" | sha256sum }}
 # fzf.env.tpl: {{ include "dot_config/omarchy/themed/fzf.env.tpl" | sha256sum }}
+# skills-sync.env.tpl: {{ include "dot_config/omarchy/themed/skills-sync.env.tpl" | sha256sum }}
 
 set -euo pipefail
 

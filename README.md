@@ -579,10 +579,12 @@ and gradient functions. A leftover `{{` aborts the write and keeps the last good
 file rather than handing starship a config with a token in it — so a template that
 starts using `mix` needs this hook extended, and says so on stderr if it does not.
 
-`run_onchange_after_omarchy-themed.sh.tmpl` is keyed on both templates and both
-hooks and runs `omarchy-theme-refresh`, which re-renders and re-fires the hooks
-without changing the background. That is what converges a fresh machine or an
-edited template; every theme switch after that is the hook's own job.
+`run_onchange_after_omarchy-themed.sh.tmpl` is keyed on every template this repo
+owns and both hooks, and runs `omarchy-theme-refresh`, which re-renders and
+re-fires the hooks without changing the background. That is what converges a
+fresh machine or an edited template; every theme switch after that is the hook's
+own job. A new `themed/*.tpl` must be added to that key list, or nothing renders
+it until an unrelated template changes.
 
 ## mise global tools
 
@@ -720,8 +722,9 @@ omp into that pipeline:
   decoration, but the stock hooks beside it are 755.
 - `run_onchange_after_omarchy-themed.sh.tmpl` — the template only renders
   inside a theme apply, so a fresh machine and an edited template both need one
-  `omarchy-theme-refresh`. Keyed on the hashes of the two files above and of the
-  two starship files, since both bridges converge the same way.
+  `omarchy-theme-refresh`. Keyed on the hashes of the two files above, the two
+  starship files and the two hookless templates (`fzf.env.tpl`,
+  `skills-sync.env.tpl`), since every bridge converges the same way.
 
 Omarchy already ships `pi.json.tpl` and `omarchy-theme-set-pi`, but they target
 upstream `pi`: `~/.pi/agent/themes/` plus a `settings.json` theme key. omp is
