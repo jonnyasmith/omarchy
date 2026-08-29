@@ -58,3 +58,16 @@ o.bind(
   "USB drives",
   "omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.usb/usb-tui.sh"
 )
+
+-- Skills: copy agent skills out of the repos I follow into the one I own.
+-- L for "learn", because the letters this picker wanted are all taken: S is
+-- Omarchy's "Move window to scratchpad", K and A are gone too (A is the audio
+-- picker above). Check with `hyprctl binds` before adding the next one.
+-- Same TUI.float reasoning as above, but unlike the three pickers this one is
+-- not a picker: it opens the `skills-sync` TUI, which stays until quit, and
+-- prints the plan and its confirmation after that.
+o.bind(
+  "SUPER + ALT + L",
+  "Skills",
+  "omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.skills/skills.sh"
+)

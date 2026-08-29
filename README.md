@@ -46,20 +46,22 @@ What this repo is standing on:
 
 | Surface | Here |
 |---|---|
-| Menu row | `dot_config/omarchy/extensions/omarchy-menu.jsonc` — a *Plugins* container holding *Audio output*, *Dev ports* and *USB drives* |
-| Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + A`, `SUPER + ALT + P`, `SUPER + ALT + U` |
+| Menu row | `dot_config/omarchy/extensions/omarchy-menu.jsonc` — a *Plugins* container holding *Audio output*, *Dev ports*, *USB drives* and *Skills* |
+| Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + A`, `SUPER + ALT + P`, `SUPER + ALT + U`, `SUPER + ALT + L` |
 | Hooks (`theme-set.d`) | starship and omp theme bridges |
-| Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env}.tpl` |
-| Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.audio,jonny.ports,jonny.usb}/` |
-| Shared picker library | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — modal fzf, sourced by all three TUIs |
+| Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env,skills-sync.env}.tpl` |
+| Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.audio,jonny.ports,jonny.usb,jonny.skills}/` |
+| Shared picker library | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — modal fzf, sourced by the three fzf pickers |
 | Themes (overlay) | `dot_config/omarchy/themes/gruvbox/neovim.lua` |
 | Branding | `dot_config/omarchy/branding/` |
 | Hyprland overrides | `dot_config/hypr/{input,bindings}.lua` |
 | Whole-file copies (no override point) | `dot_config/tmux/tmux.conf`, `dot_config/foot/foot.ini` |
 
-All three tools sit on the same two rungs: a searchable menu row and a
+All four tools sit on the same two rungs: a searchable menu row and a
 `SUPER + ALT` chord, each handing a shell script to a floating terminal. None
-needs a manifest or QML. `jonny.ports`
+needs a manifest or QML. Three of the four *are* that shell script; *Skills* is
+a launcher for a Go TUI, which is the same rung with a different tenant.
+`jonny.ports`
 used to be a full shell plugin as well — the most expensive rung — for a bar
 widget with a per-row click popup. The keyboard picker replaced it outright:
 the popup was a second implementation of a list you only ever want at the
@@ -925,7 +927,7 @@ the same command, so nothing depends on where a row sits.
 ## Modal fzf
 
 `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — one `vfzf` function, sourced
-by all three pickers, that makes fzf behave like a vim buffer: **no input line
+by the three fzf pickers, that makes fzf behave like a vim buffer: **no input line
 at all until you ask for one**. Bare `j`/`k` move, `l` opens, `h` goes back, and
 `/` turns the list into a search box that `esc` closes again.
 
@@ -1398,6 +1400,126 @@ cannot be read back is exactly the drive this check exists to catch.
 `SUPER + ALT + U` was free — check with `omarchy menu keybindings --print`
 before taking a chord — and the description argument to `o.bind` is what that
 list renders.
+
+## Agent skills
+
+Copy agent skills out of the skills repos I follow and into the one I own, one
+reviewed diff at a time. `SUPER + ALT + L`, or *Skills* under *Plugins*.
+
+| Path | What |
+|---|---|
+| `dot_config/omarchy/plugins/jonny.skills/executable_skills.sh` | the launcher: palette, missing-binary notice, the pause |
+| `dot_config/omarchy/themed/skills-sync.env.tpl` | the palette, rendered per theme |
+| `run_after_skills-sync.sh` | builds the `skills-sync` binary if it is missing |
+| `dot_config/omarchy/extensions/omarchy-menu.jsonc` | the *Skills* row, under *Plugins* |
+| `dot_config/hypr/bindings.lua` | `SUPER + ALT + L` opens it |
+
+Everything visible belongs to `skills-sync` (`~/dev/skills-sync`, private, and
+not in the table above because it is not managed from here). It is a Bubble Tea
+panel TUI: repo membership on the left, the skills that differ top right, the
+diff of the row under the cursor below it.
+
+| Key | |
+|---|---|
+| `j` / `k` | move |
+| `space` | tick a skill |
+| `a` · `n` · `d` | tick all · every `new` one · every `diverged` one |
+| `←` / `→` | filter to one source repo |
+| `1`–`4` · `tab` | focus a panel |
+| `s` · `t` | add a source repo · set the target |
+| `r` | rescan |
+| `ctrl+s` | sync what is ticked |
+| `q` or `esc` | quit, having written nothing |
+
+`ctrl+s` closes the TUI and prints the plan — every file it would add, replace
+or delete — then asks once before copying anything.
+
+### There was an fzf picker here, for one evening
+
+The three tools above are bash and fzf, so the reflex was to make this one
+match: a `-tsv` flag on the binary for the rows, `-diff REF` for the preview
+pane, and `vfzf` for the keys. It worked. It was still the wrong shape, and the
+reasons are worth keeping, because the next tool with an existing UI will make
+the same offer:
+
+- **It was a subset, not a skin.** A single fzf list cannot hold two panes of
+  repo membership, a diff beside the row it belongs to, or a directory browser
+  for adding a repo, so those stayed behind in the Go TUI — which meant the
+  answer to "where do I add a source repo?" became "not in the thing you just
+  opened".
+- **It added a contract to keep.** `ref ⇥ name ⇥ status ⇥ source ⇥ category ⇥
+  summary`, parsed on the other side of a pipe, plus a test in the Go repo to
+  stop a column moving. That is a real maintenance cost, paid for a redraw of
+  data that already had a drawer.
+- **The keys were already right.** `j`/`k`, `space`, `g`/`G`, `q`, a footer that
+  lists what works now — the Bubble Tea UI landed on the same conventions
+  `vfzf` did, because both were written for the same hands. `h`/`l` differ
+  (source tabs rather than back/accept), which is what a screen with no
+  levels needs.
+
+What the fzf version genuinely had was Omarchy's colours, and that turned out
+to be the cheap half.
+
+### Theming somebody else's TUI without teaching it about Omarchy
+
+`skills-sync` reads six environment variables and knows nothing else:
+
+```
+SKILLS_SYNC_ACCENT    cursor, ticks, focused border, live tab
+SKILLS_SYNC_ADDED     `new`, and an inserted diff line
+SKILLS_SYNC_CHANGED   `diverged`
+SKILLS_SYNC_REMOVED   deletions and errors
+SKILLS_SYNC_META      diff hunk headers
+SKILLS_SYNC_DIM       idle borders, idle tabs, the footer
+```
+
+`skills-sync.env.tpl` renders them from the active theme on every
+`omarchy theme set` — same rung as `fzf.env.tpl`, same lack of a hook, because
+the launcher reads the state directory itself. It sources the file with `set -a`
+so the six become environment rather than shell variables, and the binary picks
+them up.
+
+Three deliberate choices there:
+
+- **Six roles, not fifteen styles.** The Go side collapsed its fifteen
+  `lipgloss` styles onto six names in `theme.go`; the template speaks roles,
+  and nothing outside that file knows what a role is painted with.
+- **Every variable is optional, and the fallback is the old ANSI index.** Run
+  the binary in a terminal with no Omarchy anywhere and it looks exactly as it
+  did before it could be themed. That is what keeps the desktop's palette out
+  of a repo that has no business knowing about it.
+- **No background is ever set.** Same rule as `fzf.env.tpl`'s `bg:-1`: the
+  panels inherit the terminal's, so foot's `alpha=0.9` still shows through.
+  `SKILLS_SYNC_DIM` is `{{ mix background foreground 60% }}` rather than
+  `muted`, for the same reason the fzf header is — the footer is the only place
+  the keys are written down.
+
+### Four things learned building it
+
+- **A floating terminal closes mid-sentence.** The plan, the `Proceed?` answer
+  and the "synced …" lines are all printed *after* the TUI restores the screen,
+  and the window is gone the instant the process exits. Hence the `read -rsn1`
+  at the end of the launcher. It is unconditional on purpose: nothing separates
+  "aborted, nothing to read" from "synced four skills" — both exit 0 — and
+  inferring it from the wording of a message would make the launcher a parser
+  of the other program's prose.
+- **`CI=true` strips colour, and an agent shell exports it.** Two screenshots of
+  a perfectly themed TUI came back monochrome — not the 16-colour fallback,
+  *no* colour — because `omarchy-launch-tui` inherits the environment of
+  whatever ran it, and the palette detection behind Bubble Tea treats `CI` the
+  way it treats `NO_COLOR`. When checking colours by hand from a tool session,
+  launch with `env -u CI -u NO_COLOR`, and confirm from pixels
+  (`magick shot.png txt:- | grep srgb`) rather than by eye through a
+  screenshot's compression.
+- **A first run has nothing remembered.** `skills-sync` with no config asks for
+  `-target DIR`; the launcher turns a missing *binary* into a notification for
+  the same reason — a window that closes cannot carry an error message. The
+  config it writes (`~/.config/skills-sync/config.json`) names repo paths, so it
+  is runtime state and stays unmanaged. See rule 7.
+- **`SUPER + ALT + S` was taken** by Omarchy's *Move window to scratchpad*, and
+  `K` and `A` were gone too, so the chord is `L` for "learn". `hyprctl binds`
+  lists what is taken by modmask; `omarchy menu keybindings --print` only shows
+  bindings that carry a description.
 
 ## Omarchy agent skill: fingerprint guide
 

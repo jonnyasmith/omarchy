@@ -35,7 +35,7 @@
   // tool is one "plugins.<name>" line and nothing else has to change.
   // Its children stay searchable from the root -- SUPER + SPACE then "port"
   // still reaches the picker -- so the extra level costs nothing typed.
-  "plugins": {"icon":"\uf12e","label":"Plugins","description":"Personal tools: audio outputs, dev ports, USB drives"},
+  "plugins": {"icon":"\uf12e","label":"Plugins","description":"Personal tools: audio outputs, dev ports, USB drives, agent skills"},
 
   // Dev ports: the same picker SUPER + ALT + P opens, for when the chord is
   // not in muscle memory yet. Same glyph as the bar widget (0xF048D).
@@ -52,5 +52,12 @@
   // Audio outputs: local PipeWire sinks and network AirPlay receivers in one
   // picker. A switch also moves streams already playing; r rebuilds AirPlay
   // sinks after a receiver has dropped its RTSP session.
-  "plugins.audio": {"icon":"\uf028","label":"Audio output","description":"Switch system audio between local speakers, HomePods, and Apple TVs","aliases":["audio","airplay","homepod","speakers"],"action":"omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.audio/audio-tui.sh"}
+  "plugins.audio": {"icon":"\uf028","label":"Audio output","description":"Switch system audio between local speakers, HomePods, and Apple TVs","aliases":["audio","airplay","homepod","speakers"],"action":"omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.audio/audio-tui.sh"},
+
+  // Skills: the same thing SUPER + ALT + L opens. Copies agent skills from
+  // the repos I follow into the one I own, one reviewed diff at a time. The
+  // UI is the `skills-sync` binary's own; the row points at a launcher that
+  // hands it this theme's palette, so a machine without the binary gets a
+  // notification rather than an empty window.
+  "plugins.skills": {"icon":"\uf19d","label":"Skills","description":"Copy agent skills from the repos you follow into your own","aliases":["skills","agents"],"action":"omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.skills/skills.sh"}
 }

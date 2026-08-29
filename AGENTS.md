@@ -102,23 +102,24 @@ about to create it in `~`.
 See `README.md` for the per-item detail. Summary:
 
 - `dot_config/hypr/input.lua` — Hyprland input overrides (Caps Lock ⇄ Escape).
-- `dot_config/hypr/bindings.lua` — Omarchy's commented starter plus three
+- `dot_config/hypr/bindings.lua` — Omarchy's commented starter plus four
   bindings: `SUPER + ALT + A` opens the audio-output picker,
-  `SUPER + ALT + P` the dev-ports picker, and `SUPER + ALT + U` the USB-drive
-  picker. The description argument is what `omarchy menu keybindings` renders,
-  so never omit it.
+  `SUPER + ALT + P` the dev-ports picker, `SUPER + ALT + U` the USB-drive
+  picker and `SUPER + ALT + L` the skills TUI (`S`, `K` and `A` were all
+  taken; `L` is for "learn"). The description argument is what
+  `omarchy menu keybindings` renders, so never omit it.
 - `dot_config/hypr/autostart.lua` — the login session layout: Chromium on
   workspace 1, `foot herdr` on workspace 2, focus left there. Placement is a
   per-launch `[workspace N silent]` exec rule, which survives the `uwsm-app`
   wrapper; only the terminal omits `silent`, so it wins focus.
 - `dot_config/omarchy/extensions/omarchy-menu.jsonc` — the starter plus a
   *Plugins* container (a row with no `action` is a submenu; the parent comes
-  from the dotted id) holding *Audio output*, *Dev ports* and *USB drives*.
-  Every new personal tool is one `plugins.<name>` line; nothing goes on the
-  root menu, which is Omarchy's and appends user rows to the bottom. Search and
-  `aliases` still reach the children, so nesting costs nothing typed.
-  Hot-reloads on save;
-  `omarchy menu summon plugins` checks a change parsed without running a row.
+  from the dotted id) holding *Audio output*, *Dev ports*, *USB drives* and
+  *Skills*. Every new personal tool is one `plugins.<name>` line; nothing goes
+  on the root menu, which is Omarchy's and appends user rows to the bottom.
+  Search and `aliases` still reach the children, so nesting costs nothing
+  typed. Hot-reloads on save; `omarchy menu summon plugins` checks a change
+  parsed without running a row.
   Glyphs are `\u` escapes: they are private-use codepoints and a literal one is
   easy to lose in transit.
 - `dot_config/omarchy/shell.json` — the bar layout and the `idle` screensaver
@@ -171,8 +172,30 @@ See `README.md` for the per-item detail. Summary:
   nothing to type, so it gets the extra list level format and write get from
   their filesystem and image menus, defaulting to *Keep it attached* — see
   README.
-- `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — `vfzf`, the modal fzf
-  all three pickers source, so their keys cannot drift: normal mode by default,
+- `dot_config/omarchy/plugins/jonny.skills/` +
+  `dot_config/omarchy/themed/skills-sync.env.tpl` + `run_after_skills-sync.sh`
+  — agent skills: copy them out of the skills repos I follow into the one I own.
+  Unlike the three above this is not a picker and holds no UI: everything
+  visible is `skills-sync` (Go, `~/dev/skills-sync`, private), a Bubble Tea
+  panel TUI that finds the skills tree in repos disagreeing about layout,
+  classifies each skill `new`/`diverged`/`same`, shows the diff, and copies
+  through a staging directory behind its own `Proceed?`. `skills.sh` is a
+  launcher for the three things that binary must not know: this theme's palette
+  (six `SKILLS_SYNC_*` variables, rendered by the template, sourced with
+  `set -a`; every one optional, falling back to the ANSI indices the TUI had
+  before), a missing binary (a notification, because a window that closes
+  cannot carry an error), and the window closing on exit (the pause, which is
+  unconditional because nothing distinguishes an abort from a sync). There was
+  an fzf front end here for one evening, drawing a `-tsv` flag added for it; it
+  was a subset of the Go TUI plus a parsing contract, and both are gone. Adding
+  or forgetting a repo happens in the TUI's own left-hand panels. `run_after_`
+  because the build is skipped by a `command -v` on every machine that has it,
+  and `once_` state would never retry a failed build; it never clones, it
+  prints the command. The binary's config (`~/.config/skills-sync/config.json`)
+  names repo paths, so it stays unmanaged — rule 7. See README before changing
+  the palette contract or the pause.
+- `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — `vfzf`, the modal fzf the
+  three fzf pickers source, so their keys cannot drift: normal mode by default,
   no input line at all, `j`/`k` move, `l` or enter opens, `h` goes back, `/`
   opens a search box, esc closes it. The footer is the mode line and changes
   with the mode. Sourced, not run, so no `executable_` prefix. Four things to
@@ -186,9 +209,10 @@ See `README.md` for the per-item detail. Summary:
   capture the key in search mode too) and never `+abort` (which drops the
   output queue). Read the README section before changing any of it.
 - `dot_config/omarchy/themed/fzf.env.tpl` — the fzf palette, rendered per
-  theme and sourced by both pickers at launch, `FZF_THEME_RED` included for the
-  USB picker's erase warning. No `theme-set.d` hook: the consumer reads the
-  state dir directly.
+  theme and sourced by the three fzf pickers at launch, `FZF_THEME_RED`
+  included for the USB picker's erase warning. No `theme-set.d` hook: the
+  consumer reads the state dir directly. `skills-sync.env.tpl` beside it is the
+  same rung for the Go TUI.
 - `dot_bashrc` + `dot_config/blesh/init.sh` + `dot_config/bash/` — ble.sh (the
   zsh-autosuggestions equivalent), its settings, its fzf/zoxide integrations,
   and the aliases ported from the old zsh setup. Requires `yay -S blesh-git`;
