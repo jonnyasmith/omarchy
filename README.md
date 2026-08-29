@@ -52,15 +52,20 @@ What this repo is standing on:
 | Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env,skills-sync.env}.tpl` |
 | Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.audio,jonny.ports,jonny.usb,jonny.skills}/` |
 | Shared picker library | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — modal fzf, sourced by the three fzf pickers |
+| Shell command + editor keymap (no desktop surface) | `dot_config/omarchy/plugins/jonny.mdpreview/` with `dot_config/bash/mdpreview.sh` and `dot_config/nvim/lua/plugins/mdpreview.lua` |
 | Themes (overlay) | `dot_config/omarchy/themes/gruvbox/neovim.lua` |
 | Branding | `dot_config/omarchy/branding/` |
 | Hyprland overrides | `dot_config/hypr/{input,bindings}.lua` |
 | Whole-file copies (no override point) | `dot_config/tmux/tmux.conf`, `dot_config/foot/foot.ini` |
 
-All four tools sit on the same two rungs: a searchable menu row and a
+Four of the five tools sit on the same two rungs: a searchable menu row and a
 `SUPER + ALT` chord, each handing a shell script to a floating terminal. None
-needs a manifest or QML. Three of the four *are* that shell script; *Skills* is
-a launcher for a Go TUI, which is the same rung with a different tenant.
+needs a manifest or QML. Three of those four *are* that shell script; *Skills*
+is a launcher for a Go TUI, which is the same rung with a different tenant.
+The fifth, markdown preview, is on neither rung, and deliberately: it needs a
+file path to do anything, and neither a menu row nor a chord can supply one. Its
+reach is an `mdp` shell function and an nvim keymap — the two places a path is
+already in hand.
 `jonny.ports`
 used to be a full shell plugin as well — the most expensive rung — for a bar
 widget with a per-row click popup. The keyboard picker replaced it outright:
@@ -596,12 +601,13 @@ whole restore path on a new machine.
 
 | Tool | Pin |
 |---|---|
-| `azure-cli`, `claude`, `cmake`, `codex`, `gh`, `go`, `hunk`, `oh-my-pi`, `opencode`, `uv`, `zig` | `latest` |
+| `azure-cli`, `claude`, `cmake`, `codex`, `gh`, `glow`, `go`, `hunk`, `oh-my-pi`, `opencode`, `uv`, `zig` | `latest` |
 | `bun` | `1` |
 | `dotnet` | `10`, `8` |
 | `node` | `26`, `24`, `22` |
 | `pnpm` | `11`, `10` |
 | `python` | `3.14`, `3.13` |
+| `go:github.com/chrishrb/go-grip` | `v0.9.3-0.20260825095842-3f5b3c9ef5d7` |
 
 Runtimes are pinned to a major and listed newest-first — mise installs every
 version in the list and treats the first as the default, so a project
@@ -614,6 +620,17 @@ Spelling the backend out declares the same tool under a second name, and mise
 installs it twice — `mise ls hunk` listed `aqua:modem-dev/hunk` and `hunk` side
 by side until the long form was dropped and the orphaned install uninstalled.
 `mise registry <name>` prints the backend a short name resolves to.
+
+`go-grip` is the one entry pinned to a commit rather than a version, and it is
+the only tool here spelled with its backend, because there is no registry short
+name for it. It renders the markdown preview (see *Markdown preview* below), and
+the reason for the pin is that the feature it was chosen for is not in a release:
+`internal/parser.go` gained `frontmatter.Extract` after `v0.9.2`, and 57% of the
+markdown under `~/dev` carries YAML frontmatter. On `v0.9.2` that frontmatter
+renders as an `<hr>` and a heading full of raw YAML; on this commit it is a
+table, the way GitHub does it. The pin is an exact pseudo-version rather than
+`@main` on purpose — a branch would re-resolve on every `mise up` and quietly
+swap the renderer. Revisit it when `v0.9.3` ships and drop back to `latest`.
 
 `[settings] minimum_release_age = "7d"` is the counterweight to all that
 floating: a `latest` resolved the day it ships is a supply-chain window, so mise
@@ -1523,6 +1540,149 @@ Three deliberate choices there:
   `K` and `A` were gone too, so the chord is `L` for "learn". `hyprctl binds`
   lists what is taken by modmask; `omarchy menu keybindings --print` only shows
   bindings that carry a description.
+
+## Markdown preview
+
+Read a markdown file, mermaid diagrams included, in a Chromium app window
+Hyprland tiles beside the terminal. `mdp` from a shell, `<Leader>mp` from
+Neovim.
+
+| Path | Job |
+|---|---|
+| `dot_config/omarchy/plugins/jonny.mdpreview/mdpreview.sh` | the whole implementation: find or start a server, open or focus the window |
+| `dot_config/bash/mdpreview.sh` | the `mdp` function and its completion |
+| `dot_config/nvim/lua/plugins/mdpreview.lua` | `<Leader>mp`, which writes the buffer and calls the same script |
+| `dot_config/mise/config.toml` | the pinned `go-grip` that does the rendering |
+
+```
+mdp             preview ./README.md
+mdp <file.md>   preview a file, or focus its window if it is already open
+mdp --stop      stop every preview server
+```
+
+### Why this is not in the terminal
+
+It was meant to be. The stack makes it impossible, and the reason is worth
+writing down because it is not obvious and it is not fixable by configuration:
+
+- **foot 1.27 speaks sixel and not the kitty graphics protocol.** Its source has
+  `sixel.c`; every `kitty` symbol in it is the *keyboard* protocol.
+- **herdr 0.8.2 composites every pane into a character grid.** Its only image
+  option is `experimental.kitty_graphics`, default off, and there is no sixel
+  option at any setting.
+
+Those two facts do not overlap, so no image protocol survives from a herdr pane
+to the screen. `snacks.nvim` is already installed and has a complete `image`
+module, and it cannot help: it emits kitty APC only — `grep -i sixel` across the
+plugin returns nothing — inline placement needs kitty Unicode placeholders
+(`0x10EEEE`) foot does not implement, and AstroNvim sets `image.doc.enabled =
+false` anyway. `image.nvim` *does* have a sixel backend that works in foot, but
+only with foot talking to nvim directly, which means giving up herdr.
+
+The browser-free alternative was `mermaid-ascii`, the one Mermaid renderer that
+needs no headless Chromium. A census of the 136 mermaid blocks under `~/dev`
+ruled it out: 30 use `subgraph` and 25 use `{diamond}`, neither of which it
+supports, and 22 are in diagram types it cannot parse at all.
+
+### Why go-grip and not a Neovim plugin
+
+The corpus decided it. 2268 markdown files under `~/dev`:
+
+| Files | Share | Feature |
+|---|---|---|
+| 1302 | 57.4% | YAML frontmatter |
+| 637 | 28.1% | tables |
+| 52 | 2.3% | task lists |
+| 48 | 2.1% | math |
+| 44 | 1.9% | mermaid |
+| 4 | 0.2% | footnotes |
+
+Frontmatter is in the majority, because every `SKILL.md` in the skills repos has
+it. That single column eliminated the alternatives:
+
+- **`iamcco/markdown-preview.nvim`** — the obvious choice, and unmaintained:
+  master HEAD 2023-10-17, sole release `v0.0.10` from **2022-05-13**, 228 open
+  issues. It vendors its own `mermaid.min.js`, and the install route most people
+  use downloads the release binary, whose bundle is **Mermaid 8.13.8**. Even the
+  `yarn` build only reaches 10.2.3, which cannot parse `architecture-beta`
+  (needs 11.1), `block-beta`, `sankey`, `xychart`, `radar` or `treemap`.
+- **`brianhuster/live-preview.nvim`** — genuinely well built, actively
+  maintained, zero external dependencies, renders *as you type*, and has scroll
+  sync. Its client loads only `injectLinenumbers`, `emoji` and `katex`: no
+  frontmatter handling, not configurable, so 1302 files would each open with two
+  horizontal rules and a block of raw YAML at the top.
+- **`go-grip`** — a single static Go binary that extracts frontmatter into a
+  table, and ships **Mermaid 11.13.0**, the newest of anything surveyed. All 11
+  diagram types in the census render from it with no errors, `architecture-beta`
+  included.
+
+The cost of that choice is the reload trigger. go-grip watches the file's
+directory with fsnotify and does a full page reload, so **the preview updates on
+`:w`, not on keystroke**, and scroll position resets when it does. That was the
+deliberate trade against `live-preview.nvim`: correct frontmatter on 57% of files
+beats keystroke latency on all of them, and a reload that fires when you save
+rather than mid-sentence is calmer to work next to. It is also why the nvim
+keymap writes the buffer before it calls the script — previewing unsaved bytes
+would just show stale output.
+
+### Chromium does the window, and derives its own app_id
+
+There is no `--user-data-dir` and no `--class` here, and both absences were
+measured rather than assumed.
+
+`--app=<url>` handed to the *already running* Chromium — the one
+`autostart.lua` puts on workspace 1 — makes a proper app window in that same
+process. No second browser, no second profile. The launcher process exits
+immediately, which looks like failure and is not.
+
+Its Wayland app_id is Chromium's to choose, not ours: for an app window it takes
+the `GetXdgAppIdForWebApp` branch, which is
+`chrome-<host>__<url path>-<profile>`, and **ignores `--class` completely** on
+that path. So `http://localhost:6419/README.md` becomes
+`chrome-localhost__README.md-Default`. The script rebuilds that string and hands
+it to `omarchy-launch-or-focus-webapp`, which is what makes a second `mdp` on the
+same file focus the open window instead of stacking another one. Because the
+URL path is in the app_id, this is per-file for free — and it is why a window
+rule matching previews needs a regex (`^chrome-localhost__.*-Default$`), not a
+literal.
+
+There is no window rule at present. App windows tile in dwindle without help,
+and adding one would mean bringing `hyprland.lua` under management purely to
+carry a `require` line.
+
+### Four things that are the way they are for a reason
+
+- **`uwsm-app` does not return until the unit it started exits.** Every other
+  caller in Omarchy `exec`s it as the last thing they do, which hides this. Used
+  plainly it hung the script for the life of the server and the window never
+  opened. It is backgrounded here, and only the waiter is: go-grip is in its own
+  transient scope by then, so losing the waiter costs nothing while the server
+  still survives the terminal that started it.
+- **One server per directory, and the port is discovered, not fixed.** go-grip
+  serves `dirname <file>`, so a file in a second directory needs a second
+  server. Ports are found by reading `/proc/*/cmdline` for running go-grips and
+  matching their served directory. Hashing the directory to a port was the first
+  attempt and is worse than it looks: a collision silently previews the wrong
+  file. `/proc` is read rather than `pgrep -a` parsed because a filename with a
+  space in it makes a pgrep line ambiguous and `cmdline` is already
+  NUL-delimited.
+- **`-b=false` is not optional.** `internal/open.go` hard-codes `xdg-open` with
+  no flag to override it, so go-grip's own browser opening has to be refused and
+  the window opened here.
+- **It binds every interface.** `ListenAndServe(":port")`; `-H` only changes the
+  URL it prints. The handler is a plain file server over the served directory, so
+  the only thing keeping a preview off the tailnet is ufw — default-deny incoming,
+  plus the port-22-only rule in `run_after_sshd-tailnet.sh`. Widening that rule
+  publishes every directory anyone has previewed.
+
+### Verifying a change
+
+`mdp --stop`, then `mdp` some file with frontmatter and a mermaid fence, and
+check three things on the real window: the frontmatter is a table and not raw
+YAML, the diagram is an SVG and not an error box, and a `:w` in the editor
+updates the page. `hyprctl clients -j | jq -r '.[].class'` should show exactly
+one `chrome-localhost__<file>-Default` per previewed file, and running `mdp`
+again on the same file should focus it rather than add a second.
 
 ## Omarchy agent skill: fingerprint guide
 

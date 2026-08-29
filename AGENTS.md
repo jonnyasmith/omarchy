@@ -194,6 +194,26 @@ See `README.md` for the per-item detail. Summary:
   prints the command. The binary's config (`~/.config/skills-sync/config.json`)
   names repo paths, so it stays unmanaged — rule 7. See README before changing
   the palette contract or the pause.
+- `dot_config/omarchy/plugins/jonny.mdpreview/mdpreview.sh` +
+  `dot_config/bash/mdpreview.sh` + `dot_config/nvim/lua/plugins/mdpreview.lua` —
+  markdown preview: read a file, mermaid included, in a Chromium app window
+  Hyprland tiles beside the terminal. `mdp` from a shell, `<Leader>mp` from
+  Neovim, both calling the one script, so a document cannot look different
+  depending on which side opened it. Alone among these tools it sits on no
+  Omarchy rung: it needs a file path, and neither a menu row nor a chord can
+  supply one. It is in the terminal nowhere because it cannot be — foot speaks
+  sixel, herdr composites panes to a character grid with no sixel path, and the
+  two do not overlap, so no image protocol reaches the screen from a pane.
+  Rendering is `go-grip`, pinned in `dot_config/mise/config.toml` to a commit
+  rather than a release because `frontmatter.Extract` landed after `v0.9.2` and
+  57% of the markdown under `~/dev` is frontmatter-headed. Four load-bearing
+  details: `uwsm-app` blocks until its unit exits so the server launch is
+  backgrounded; one server per directory with the port discovered from
+  `/proc/*/cmdline`, never hashed; `-b=false` because go-grip's own opener is a
+  hard-coded `xdg-open`; and Chromium derives the app window's app_id itself
+  (`chrome-<host>__<path>-<profile>`, ignoring `--class`), which is what makes a
+  repeat `mdp` focus instead of duplicate. Reload is on `:w`, not on keystroke.
+  See README before changing the port discovery, the pin or the app_id.
 - `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — `vfzf`, the modal fzf the
   three fzf pickers source, so their keys cannot drift: normal mode by default,
   no input line at all, `j`/`k` move, `l` or enter opens, `h` goes back, `/`
