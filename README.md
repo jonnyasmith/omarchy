@@ -844,6 +844,33 @@ lands on a plugin set known to work, the pin stays in git history for rollback,
 and day-to-day updates are silent. The trade is that the baseline only moves on
 a deliberate `chezmoi re-add`, so expect it to lag.
 
+### Splits on `<Leader>h` and `<Leader>v`
+
+`lua/plugins/splits.lua` replaces AstroNvim's split keys. Upstream puts
+*Horizontal Split* on a bare `\` and *Vertical Split* on a bare `|`, neither of
+which says which axis it cuts, and both of which are away from the leader menu
+where every other window action lives. This file maps `<Leader>h` to `split` and
+`<Leader>v` to `vsplit`, and sets the two bare keys to `false`, which is how
+astrocore spells "delete this mapping".
+
+`<Leader>h` was Snacks' *Home Screen*, so it moves to `<Leader>H`. The move
+copies upstream's mapping table rather than writing a new one, which keeps both
+its description and its toggle behaviour — pressing it while the dashboard is
+focused closes the dashboard instead of redrawing it.
+
+It is a separate file rather than an edit to `lua/plugins/astrocore.lua`,
+which is still a template stub, for the same reason `mdpreview.lua` is: a
+spec of `{ "AstroNvim/astrocore", opts = function(_, opts) … end }` in any
+file under `lua/plugins/` reaches the same mapping table, and the function form
+is what lets a mapping AstroNvim set be read before it is overwritten. Order is
+guaranteed: `lazy_setup.lua` imports `astronvim.plugins` first, so every
+upstream mapping is in `opts.mappings` by the time this function runs.
+
+Check a change with
+`nvim --headless -c 'lua print(vim.inspect(vim.fn.maparg(" v", "n", false, true)))' -c q`
+— `maparg` reports the resolved mapping, so a spec that never ran and a spec
+that ran and lost a merge look different.
+
 ## Hyprland input
 
 `dot_config/hypr/input.lua` is the user-side Hyprland input override, loaded
