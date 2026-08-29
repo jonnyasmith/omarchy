@@ -47,7 +47,7 @@ What this repo is standing on:
 | Surface | Here |
 |---|---|
 | Menu row | `dot_config/omarchy/extensions/omarchy-menu.jsonc` — a *Plugins* container holding *Audio output*, *Dev ports*, *USB drives* and *Skills* |
-| Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + A`, `SUPER + ALT + P`, `SUPER + ALT + U`, `SUPER + ALT + L` |
+| Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + A`, `SUPER + ALT + P`, `SUPER + ALT + U`, `SUPER + ALT + L`, plus `SUPER + hjkl` window focus |
 | Hooks (`theme-set.d`) | starship and omp theme bridges |
 | Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env,skills-sync.env}.tpl` |
 | Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.audio,jonny.ports,jonny.usb,jonny.skills}/` |
@@ -854,6 +854,47 @@ longer the Compose key. Use `caps:escape` instead if Escape should not become
 Caps Lock.
 
 Validate after `chezmoi apply` with `hyprctl reload && hyprctl configerrors`.
+
+## Window focus on `hjkl`
+
+`dot_config/hypr/bindings.lua` moves *Focus on left/below/above/right window*
+onto the vim home row. Omarchy binds those four to `SUPER + arrows` in
+`/usr/share/omarchy/default/hypr/bindings/tiling.lua:15-18`; user files load
+after the defaults, so the override is three `hl.unbind` calls and four
+`o.bind`s, and no package file is touched.
+
+```lua
+hl.unbind("SUPER + J")
+hl.unbind("SUPER + K")
+hl.unbind("SUPER + L")
+
+o.bind("SUPER + H", "Focus on left window", hl.dsp.focus({ direction = "l" }))
+```
+
+**The unbinds are not optional.** Hyprland keeps both binds for a key and the
+first one registered wins, so an `o.bind` without the matching `hl.unbind` is a
+silent no-op. `SUPER + H` was the only one of the four already free; the three
+it displaced were *Toggle window split* (`SUPER + J`), *Keybindings*
+(`SUPER + K`) and *Toggle workspace layout* (`SUPER + L`). None was in use, so
+none got a new chord — the keybindings menu is still on the Omarchy menu, and
+the other two are one `hyprctl dispatch` away.
+
+The arrows are deliberately **left bound**. They are Omarchy's defaults, they
+cost nothing to keep, and two routes to one dispatcher is not a conflict.
+
+`SUPER + SHIFT + hjkl` is deliberately still free. That is where *Swap window*
+(`tiling.lua:39-42`) goes if the focus row earns a second row. Do not spend it
+on a displaced default. The rows below it are **not** available: `SUPER + CTRL`
+holds *Hardware menu* (`H`), *Herdr keybindings* (`K`) and *Lock system* (`L`),
+and `SUPER + ALT` holds the *Skills* picker (`L`) and *Tmux keybindings* (`K`).
+
+Verify with `hyprctl reload && hyprctl configerrors`, then
+`omarchy menu keybindings --print | grep 'Focus on'` — four `SUPER + <letter>`
+rows and four `SUPER + <arrow>` rows. Testing the actual keystroke needs a
+human finger: injecting `SUPER + H` with `wtype` fires inconsistently here, and
+it fails the same way on the untouched arrow binds, so it proves nothing either
+way. To check the dispatcher rather than the key, run
+`hyprctl dispatch 'hl.dsp.focus({ direction = "l" })'` with two tiled windows.
 
 ## Login session layout
 

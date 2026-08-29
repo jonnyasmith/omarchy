@@ -71,3 +71,24 @@ o.bind(
   "Skills",
   "omarchy-launch-tui --app-id=TUI.float $HOME/.config/omarchy/plugins/jonny.skills/skills.sh"
 )
+
+-- Vim home-row window focus, replacing SUPER + arrows as the keys my hands
+-- reach for. The arrows stay bound to the same dispatchers by
+-- default/hypr/bindings/tiling.lua, so this adds a second route rather than
+-- retraining anything; nothing here unbinds them.
+-- Three defaults had to go to free the row -- none of them was in use:
+--   SUPER + J  Toggle window split      (tiling.lua)
+--   SUPER + K  Keybindings              (utilities.lua)
+--   SUPER + L  Toggle workspace layout  (tiling.lua)
+-- The keybindings menu is still reachable from the Omarchy menu (Learn ->
+-- Keybindings), so it did not need a new chord. SUPER + H was already free.
+-- SUPER + SHIFT + hjkl is deliberately left unbound: it is where "swap window"
+-- goes if the focus row proves itself.
+hl.unbind("SUPER + J")
+hl.unbind("SUPER + K")
+hl.unbind("SUPER + L")
+
+o.bind("SUPER + H", "Focus on left window", hl.dsp.focus({ direction = "l" }))
+o.bind("SUPER + J", "Focus on below window", hl.dsp.focus({ direction = "d" }))
+o.bind("SUPER + K", "Focus on above window", hl.dsp.focus({ direction = "u" }))
+o.bind("SUPER + L", "Focus on right window", hl.dsp.focus({ direction = "r" }))

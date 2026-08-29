@@ -107,7 +107,11 @@ See `README.md` for the per-item detail. Summary:
   `SUPER + ALT + P` the dev-ports picker, `SUPER + ALT + U` the USB-drive
   picker and `SUPER + ALT + L` the skills TUI (`S`, `K` and `A` were all
   taken; `L` is for "learn"). The description argument is what
-  `omarchy menu keybindings` renders, so never omit it.
+  `omarchy menu keybindings` renders, so never omit it. It also moves window
+  focus onto `SUPER + hjkl`, which needs `hl.unbind` on `J`/`K`/`L` first —
+  their defaults (*Toggle window split*, *Keybindings*, *Toggle workspace
+  layout*) were unused and got no new chord. The arrows stay bound as well, and
+  `SUPER + SHIFT + hjkl` is left free for *Swap window*. See README.
 - `dot_config/hypr/autostart.lua` — the login session layout: Chromium on
   workspace 1, `foot herdr` on workspace 2, focus left there. Placement is a
   per-launch `[workspace N silent]` exec rule, which survives the `uwsm-app`
