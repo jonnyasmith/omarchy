@@ -52,7 +52,7 @@ What this repo is standing on:
 | Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env,skills-sync.env}.tpl` |
 | Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.audio,jonny.ports,jonny.usb,jonny.skills}/` |
 | Shared picker library | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — modal fzf, sourced by the three fzf pickers |
-| Shell command + editor keymap (no desktop surface) | `dot_config/omarchy/plugins/jonny.mdpreview/` with `dot_config/bash/mdpreview.sh` and `dot_config/nvim/lua/plugins/mdpreview.lua` |
+| Shell command + editor keymap (no desktop surface) | `dot_config/omarchy/plugins/jonny.preview/` with `dot_config/bash/preview.sh` and `dot_config/nvim/lua/plugins/preview.lua` |
 | Themes (overlay) | `dot_config/omarchy/themes/gruvbox/neovim.lua` |
 | Branding | `dot_config/omarchy/branding/` |
 | Hyprland overrides | `dot_config/hypr/{input,bindings}.lua` |
@@ -62,9 +62,9 @@ Four of the five tools sit on the same two rungs: a searchable menu row and a
 `SUPER + ALT` chord, each handing a shell script to a floating terminal. None
 needs a manifest or QML. Three of those four *are* that shell script; *Skills*
 is a launcher for a Go TUI, which is the same rung with a different tenant.
-The fifth, markdown preview, is on neither rung, and deliberately: it needs a
+The fifth, markup preview, is on neither rung, and deliberately: it needs a
 file path to do anything, and neither a menu row nor a chord can supply one. Its
-reach is an `mdp` shell function and an nvim keymap — the two places a path is
+reach is an `mp` shell function and an nvim keymap — the two places a path is
 already in hand.
 `jonny.ports`
 used to be a full shell plugin as well — the most expensive rung — for a bar
@@ -623,8 +623,9 @@ by side until the long form was dropped and the orphaned install uninstalled.
 
 `go-grip` is the one entry pinned to a commit rather than a version, and it is
 the only tool here spelled with its backend, because there is no registry short
-name for it. It renders the markdown preview (see *Markdown preview* below), and
-the reason for the pin is that the feature it was chosen for is not in a release:
+name for it. It renders the markdown half of markup preview (see *Markup
+preview* below), and the reason for the pin is that the feature it was chosen
+for is not in a release:
 `internal/parser.go` gained `frontmatter.Extract` after `v0.9.2`, and 57% of the
 markdown under `~/dev` carries YAML frontmatter. On `v0.9.2` that frontmatter
 renders as an `<hr>` and a heading full of raw YAML; on this commit it is a
@@ -859,7 +860,7 @@ its description and its toggle behaviour — pressing it while the dashboard is
 focused closes the dashboard instead of redrawing it.
 
 It is a separate file rather than an edit to `lua/plugins/astrocore.lua`,
-which is still a template stub, for the same reason `mdpreview.lua` is: a
+which is still a template stub, for the same reason `preview.lua` is: a
 spec of `{ "AstroNvim/astrocore", opts = function(_, opts) … end }` in any
 file under `lua/plugins/` reaches the same mapping table, and the function form
 is what lets a mapping AstroNvim set be read before it is overwritten. Order is
@@ -1609,24 +1610,41 @@ Three deliberate choices there:
   lists what is taken by modmask; `omarchy menu keybindings --print` only shows
   bindings that carry a description.
 
-## Markdown preview
+## Markup preview
 
-Read a markdown file, mermaid diagrams included, in a Chromium app window
-Hyprland tiles beside the terminal. `mdp` from a shell, `<Leader>mp` from
-Neovim — from a buffer, or from a neo-tree node, which never opens the file.
+Read a markdown or HTML file in a Chromium app window Hyprland tiles beside the
+terminal. `mp` from a shell, `<Leader>mp` from Neovim — from a buffer, or from a
+neo-tree node, which never opens the file.
 
 | Path | Job |
 |---|---|
-| `dot_config/omarchy/plugins/jonny.mdpreview/mdpreview.sh` | the whole implementation: find or start a server, open or focus the window |
-| `dot_config/bash/mdpreview.sh` | the `mdp` function and its completion |
-| `dot_config/nvim/lua/plugins/mdpreview.lua` | `<Leader>mp` in a buffer and in neo-tree, both calling the same script |
-| `dot_config/mise/config.toml` | the pinned `go-grip` that does the rendering |
+| `dot_config/omarchy/plugins/jonny.preview/preview.sh` | the whole implementation: pick the renderer, find or start a server, open or focus the window |
+| `dot_config/bash/preview.sh` | the `mp` function and its completion |
+| `dot_config/nvim/lua/plugins/preview.lua` | `<Leader>mp` and `<Leader>ms`, in a buffer and in neo-tree, both calling the same script |
+| `dot_config/mise/config.toml` | the pinned `go-grip` that renders the markdown half |
 
 ```
-mdp             preview ./README.md
-mdp <file.md>   preview a file, or focus its window if it is already open
-mdp --stop      stop every preview server
+mp             preview ./README.md
+mp <file>      preview a .md, .html or .htm file, or focus its window if it is
+               already open
+mp --stop      stop every preview server
 ```
+
+### One chord, two renderers
+
+Markdown goes through go-grip; HTML is served as itself, because go-grip cannot
+render it (see below). Both are `mp`, and both are `<Leader>mp`, because the
+filetype is not a decision the person pressing the key has to make — it is
+already in the name of the file. The extension is the whole dispatch, it happens
+in the launcher, and the launcher is the only place either renderer is named.
+
+The name is the same on both surfaces on purpose: `<Leader>mp` is *markup
+preview*, and the shell function is `mp`. Neither has to be remembered
+separately, and `<Leader>m` is a which-key group called *Markup* rather than
+*Markdown* for the same reason. The group's second key is `<Leader>ms`, *stop
+preview servers*, which exists in Neovim as well as in the shell because the
+servers deliberately outlive both the window and the terminal that started them,
+and nvim is often the only thing still on screen.
 
 ### The same chord in neo-tree
 
@@ -1640,18 +1658,18 @@ its `window.mappings` as buffer-local keymaps (`renderer.lua` calls
 global one — which it has to, because the global one reads the *current* buffer
 and the tree buffer has no file name.
 
-Three details in `mdpreview.lua`:
+Three details in `preview.lua`:
 
 - **The node is `state.tree:get_node()`**, the pattern every command in
   neo-tree's own `sources/common/commands.lua` uses. Its `type` is checked
   against `"file"` first: a directory row and neo-tree's `"message"` rows both
   reach the handler, and neither has a previewable path.
-- **Nothing else is validated here.** Existence and the `.md` suffix are the
-  launcher's rules already, and its stderr is surfaced by the same `vim.notify`
-  the buffer path uses. A second copy of those checks would drift.
+- **Nothing else is validated here.** Existence and the previewable suffixes are
+  the launcher's rules already, and its stderr is surfaced by the same
+  `vim.notify` the buffer path uses. A second copy of those checks would drift.
 - **A dirty buffer is written by handle, not by `:w`.** The tree path may be
-  open, unsaved, in a window that is not the current one, and go-grip previews
-  what is on disk — so `write_if_dirty` finds the loaded buffer for that exact
+  open, unsaved, in a window that is not the current one, and both servers read
+  the file from disk — so `write_if_dirty` finds the loaded buffer for that exact
   name and writes *it* through `nvim_buf_call`.
 
 ### Why this is not in the terminal
@@ -1719,6 +1737,32 @@ rather than mid-sentence is calmer to work next to. It is also why the nvim
 keymap writes the buffer before it calls the script — previewing unsaved bytes
 would just show stale output.
 
+### The HTML half, and what it does not do
+
+go-grip cannot serve this half. Its handler renders only paths matching
+`(?i)\.md$` and passes everything else to a raw file server with no content
+type, so the browser offers a download instead of a page.
+
+`python3 -m http.server` does it instead — mise already pins python, so this
+costs no dependency. Three things about that choice:
+
+- **It is a server, not a `file://` URL.** `file://` is a different origin
+  model: ES modules, `fetch` and anything CORS-checked fail there, which is most
+  of what is worth previewing. A local HTTP origin behaves like the real thing.
+- **It binds `127.0.0.1`.** go-grip gives no choice and binds every interface;
+  python does, so this half takes it. That makes the ufw note below true of the
+  markdown half only.
+- **There is no reload on save.** python's handler has no watcher and injects no
+  client script, so an HTML preview updates when the window is refreshed, not
+  when the file is written. The markdown behaviour does not carry over, and
+  pretending it did would be the worse failure — a stale page looks exactly like
+  a correct one.
+
+The interpreter is resolved to an absolute path in the launcher, in the caller's
+environment, because the server is started through `uwsm-app` and lands in the
+systemd user manager's environment, where the mise shim directory is not
+guaranteed to be on `PATH`.
+
 ### Chromium does the window, and derives its own app_id
 
 There is no `--user-data-dir` and no `--class` here, and both absences were
@@ -1734,11 +1778,19 @@ the `GetXdgAppIdForWebApp` branch, which is
 `chrome-<host>__<url path>-<profile>`, and **ignores `--class` completely** on
 that path. So `http://localhost:6419/README.md` becomes
 `chrome-localhost__README.md-Default`. The script rebuilds that string and hands
-it to `omarchy-launch-or-focus-webapp`, which is what makes a second `mdp` on the
+it to `omarchy-launch-or-focus-webapp`, which is what makes a second `mp` on the
 same file focus the open window instead of stacking another one. Because the
 URL path is in the app_id, this is per-file for free — and it is why a window
 rule matching previews needs a regex (`^chrome-localhost__.*-Default$`), not a
 literal.
+
+The app_id is built from the *basename*, so two files with the same name in
+different directories share one window: previewing `a/index.html` and then
+`b/index.html` focuses the first rather than opening the second. Each directory
+still gets its own server and its own port, so this is a window-identity limit,
+not a serving one. It has been left alone because the alternative is putting the
+directory in the URL path, which means serving a parent directory and giving up
+the one-server-per-directory rule below.
 
 There is no window rule at present. App windows tile in dwindle without help,
 and adding one would mean bringing `hyprland.lua` under management purely to
@@ -1749,34 +1801,44 @@ carry a `require` line.
 - **`uwsm-app` does not return until the unit it started exits.** Every other
   caller in Omarchy `exec`s it as the last thing they do, which hides this. Used
   plainly it hung the script for the life of the server and the window never
-  opened. It is backgrounded here, and only the waiter is: go-grip is in its own
-  transient scope by then, so losing the waiter costs nothing while the server
-  still survives the terminal that started it.
+  opened. It is backgrounded here, and only the waiter is: the server is in its
+  own transient scope by then, so losing the waiter costs nothing while the
+  server still survives the terminal that started it.
 - **One server per directory, and the port is discovered, not fixed.** go-grip
-  serves `dirname <file>`, so a file in a second directory needs a second
-  server. Ports are found by reading `/proc/*/cmdline` for running go-grips and
-  matching their served directory. Hashing the directory to a port was the first
-  attempt and is worse than it looks: a collision silently previews the wrong
-  file. `/proc` is read rather than `pgrep -a` parsed because a filename with a
-  space in it makes a pgrep line ambiguous and `cmdline` is already
-  NUL-delimited.
+  serves `dirname <file>`, and the static server is pointed at the same, so a
+  file in a second directory needs a second server. Ports are found by reading
+  `/proc/*/cmdline` for running servers and matching their served directory:
+  `6419-6438` for go-grip, `6519-6538` for the static half, a separate decade so
+  a glance at `ss` says which is which. Hashing the directory to a port was the
+  first attempt and is worse than it looks: a collision silently previews the
+  wrong file. `/proc` is read rather than `pgrep -a` parsed because a filename
+  with a space in it makes a pgrep line ambiguous and `cmdline` is already
+  NUL-delimited. The python server is matched on `-m http.server` rather than on
+  the interpreter, which would claim every unrelated python process on the box.
 - **`-b=false` is not optional.** `internal/open.go` hard-codes `xdg-open` with
   no flag to override it, so go-grip's own browser opening has to be refused and
   the window opened here.
-- **It binds every interface.** `ListenAndServe(":port")`; `-H` only changes the
-  URL it prints. The handler is a plain file server over the served directory, so
-  the only thing keeping a preview off the tailnet is ufw — default-deny incoming,
-  plus the port-22-only rule in `run_after_sshd-tailnet.sh`. Widening that rule
-  publishes every directory anyone has previewed.
+- **go-grip binds every interface.** `ListenAndServe(":port")`; `-H` only changes
+  the URL it prints. The handler is a plain file server over the served directory,
+  so the only thing keeping a markdown preview off the tailnet is ufw —
+  default-deny incoming, plus the port-22-only rule in
+  `run_after_sshd-tailnet.sh`. Widening that rule publishes every directory
+  anyone has previewed as markdown. The HTML half is not exposed either way: it
+  binds loopback.
 
 ### Verifying a change
 
-`mdp --stop`, then `mdp` some file with frontmatter and a mermaid fence, and
-check three things on the real window: the frontmatter is a table and not raw
-YAML, the diagram is an SVG and not an error box, and a `:w` in the editor
-updates the page. `hyprctl clients -j | jq -r '.[].class'` should show exactly
-one `chrome-localhost__<file>-Default` per previewed file, and running `mdp`
-again on the same file should focus it rather than add a second.
+`mp --stop`, then `mp` some file with frontmatter and a mermaid fence, and check
+three things on the real window: the frontmatter is a table and not raw YAML, the
+diagram is an SVG and not an error box, and a `:w` in the editor updates the
+page. Then `mp` an HTML file that loads an ES module, and check the module ran —
+that is the assertion `file://` fails. `pgrep -af 'go-grip|http.server'` should
+show one server per previewed directory, and `ss -ltnH` should show the static
+ones on `127.0.0.1` and go-grip on `*`. `hyprctl clients -j | jq -r '.[].class'`
+should show exactly one `chrome-localhost__<file>-Default` per previewed
+filename, and running `mp` again on the same file should focus it rather than add
+a second. From Neovim, `<Leader>mp` on both filetypes and `<Leader>ms` to stop;
+`<Leader>m` should read *Markup* in which-key with two entries under it.
 
 ## Omarchy agent skill: fingerprint guide
 

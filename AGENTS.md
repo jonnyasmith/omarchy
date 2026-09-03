@@ -198,29 +198,40 @@ See `README.md` for the per-item detail. Summary:
   prints the command. The binary's config (`~/.config/skills-sync/config.json`)
   names repo paths, so it stays unmanaged — rule 7. See README before changing
   the palette contract or the pause.
-- `dot_config/omarchy/plugins/jonny.mdpreview/mdpreview.sh` +
-  `dot_config/bash/mdpreview.sh` + `dot_config/nvim/lua/plugins/mdpreview.lua` —
-  markdown preview: read a file, mermaid included, in a Chromium app window
-  Hyprland tiles beside the terminal. `mdp` from a shell, `<Leader>mp` from
+- `dot_config/omarchy/plugins/jonny.preview/preview.sh` +
+  `dot_config/bash/preview.sh` + `dot_config/nvim/lua/plugins/preview.lua` —
+  markup preview: read a markdown or HTML file in a Chromium app window
+  Hyprland tiles beside the terminal. `mp` from a shell, `<Leader>mp` from
   Neovim — from a buffer, or from a neo-tree node, where the same chord is a
   buffer-local mapping that shadows it and previews the node's path without
   opening the file — all calling the one script, so a document cannot look
-  different depending on which side opened it. Alone among these tools it sits
-  on no Omarchy rung: it needs a file path, and neither a menu row nor a chord
-  can supply one. It is in the terminal nowhere because it cannot be — foot
-  speaks sixel, herdr composites panes to a character grid with no sixel path,
-  and the two do not overlap, so no image protocol reaches the screen from a
-  pane.
-  Rendering is `go-grip`, pinned in `dot_config/mise/config.toml` to a commit
-  rather than a release because `frontmatter.Extract` landed after `v0.9.2` and
-  57% of the markdown under `~/dev` is frontmatter-headed. Four load-bearing
-  details: `uwsm-app` blocks until its unit exits so the server launch is
-  backgrounded; one server per directory with the port discovered from
-  `/proc/*/cmdline`, never hashed; `-b=false` because go-grip's own opener is a
-  hard-coded `xdg-open`; and Chromium derives the app window's app_id itself
-  (`chrome-<host>__<path>-<profile>`, ignoring `--class`), which is what makes a
-  repeat `mdp` focus instead of duplicate. Reload is on `:w`, not on keystroke.
-  See README before changing the port discovery, the pin or the app_id.
+  different depending on which side opened it. `<Leader>ms` (and `mp --stop`)
+  stops the servers, which outlive the window and the terminal by design. One
+  chord for both filetypes: the extension is the whole dispatch and it happens
+  in the launcher, which is the only place either renderer is named. The
+  which-key group `<Leader>m` is *Markup*, not *Markdown*, and the shell name
+  matches the chord's letters so neither is remembered separately. Alone among
+  these tools it sits on no Omarchy rung: it needs a file path, and neither a
+  menu row nor a chord can supply one. It is in the terminal nowhere because it
+  cannot be — foot speaks sixel, herdr composites panes to a character grid with
+  no sixel path, and the two do not overlap, so no image protocol reaches the
+  screen from a pane.
+  Markdown rendering is `go-grip`, pinned in `dot_config/mise/config.toml` to a
+  commit rather than a release because `frontmatter.Extract` landed after
+  `v0.9.2` and 57% of the markdown under `~/dev` is frontmatter-headed; HTML is
+  `python3 -m http.server`, because go-grip renders only `.md` and hands
+  anything else to a raw file server the browser offers as a download. Five
+  load-bearing details: `uwsm-app` blocks until its unit exits so the server
+  launch is backgrounded; one server per directory with the port discovered from
+  `/proc/*/cmdline`, never hashed (`6419-6438` markdown, `6519-6538` static);
+  `-b=false` because go-grip's own opener is a hard-coded `xdg-open`; Chromium
+  derives the app window's app_id itself (`chrome-<host>__<path>-<profile>`,
+  ignoring `--class`), which is what makes a repeat `mp` focus instead of
+  duplicate; and the python interpreter is resolved absolutely in the caller's
+  environment, because uwsm-app's unit may not have the mise shims on PATH.
+  Markdown reloads on `:w`, HTML only on refresh, and the HTML half binds
+  loopback where go-grip binds every interface. See README before changing the
+  port discovery, the pin, the app_id or the bind.
 - `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — `vfzf`, the modal fzf the
   three fzf pickers source, so their keys cannot drift: normal mode by default,
   no input line at all, `j`/`k` move, `l` or enter opens, `h` goes back, `/`
