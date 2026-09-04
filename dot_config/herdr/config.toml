@@ -19,9 +19,10 @@ new_cwd = "follow"
 prefix = "ctrl+space"
 
 # Config and help
-reload_config = "prefix+q"
+reload_config = "prefix+enter"
 help = "prefix+?"
 detach = "prefix+d"
+open_notification_target = "prefix+x"
 
 # Copy mode
 copy_mode = "prefix+["
@@ -29,14 +30,14 @@ copy_mode = "prefix+["
 # Panes
 split_horizontal = ["prefix+h", "alt+enter"]
 split_vertical = ["prefix+v", "alt+shift+enter"]
-close_pane = ["prefix+x", "alt+esc"]
+close_pane = ["prefix+o", "alt+esc"]
 zoom = "prefix+z"
 last_pane = "prefix+;"
 
-focus_pane_left = "ctrl+shift+h"
-focus_pane_down = "ctrl+shift+j"
-focus_pane_up = "ctrl+shift+k"
-focus_pane_right = "ctrl+shift+l"
+focus_pane_left = "alt+shift+h"
+focus_pane_down = "alt+shift+j"
+focus_pane_up = "alt+shift+k"
+focus_pane_right = "alt+shift+l"
 
 resize_mode = ["prefix+ctrl+left", "prefix+ctrl+down", "prefix+ctrl+up", "prefix+ctrl+right"]
 

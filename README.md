@@ -363,6 +363,18 @@ Workspace switching also answers `alt+j` / `alt+k` alongside `alt+down` /
 `alt+right`, so the motion keys match the vim-direction pane focus keys added
 to `tmux.conf`.
 
+Pane focus is `alt+shift+hjkl`, not tmux's `C-S-hjkl`. `ctrl+shift+letter`
+collapses to `ctrl+letter` unless the outer terminal speaks a keyboard
+protocol herdr actually matches; `ctrl+h` is backspace, so those chords never
+move focus. `alt+shift+h` is `ESC H` and does arrive. `prefix+h` is a split,
+so the default `prefix+hjkl` focus row is gone on purpose.
+
+Close pane is `prefix+o` (and `alt+esc`). Herdr's default
+`open_notification_target` is also `prefix+o`, so that action moves to
+`prefix+x`. Reload is `prefix+enter` — herdr names that key `enter`, not
+`return`. Edit `~/.config/herdr/config.toml` and `herdr server reload-config`;
+the file in this repo does not drive a running server.
+
 Only `~/.config/herdr/config.toml` is managed. The sibling files herdr writes
 there — `session.json`, `.plugins.lock`, `release-notes.json`, the two logs —
 are runtime state and stay out of the repo.
