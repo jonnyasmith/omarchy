@@ -359,9 +359,9 @@ The leader is `ctrl+space`, not herdr's default `ctrl+b`, matching the
 reaches readline (`set-mark`) or a nested tmux inside a herdr pane.
 
 Workspace switching also answers `alt+j` / `alt+k` alongside `alt+down` /
-`alt+up`, so the motion keys match the vim-direction pane focus keys added to
-`tmux.conf`. Nothing else in the file binds bare `alt` with a letter — tabs are
-`alt+left` / `alt+right` — so the pair is free.
+`alt+up`, and tab switching answers `alt+h` / `alt+l` alongside `alt+left` /
+`alt+right`, so the motion keys match the vim-direction pane focus keys added
+to `tmux.conf`.
 
 Only `~/.config/herdr/config.toml` is managed. The sibling files herdr writes
 there — `session.json`, `.plugins.lock`, `release-notes.json`, the two logs —
