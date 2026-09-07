@@ -645,13 +645,10 @@ table, the way GitHub does it. The pin is an exact pseudo-version rather than
 `@main` on purpose — a branch would re-resolve on every `mise up` and quietly
 swap the renderer. Revisit it when `v0.9.3` ships and drop back to `latest`.
 
-`[settings] minimum_release_age = "7d"` is the counterweight to all that
-floating: a `latest` resolved the day it ships is a supply-chain window, so mise
-ignores any release younger than a week. It applies to every tool here,
-including the `github:` backend behind `oh-my-pi`. `omarchy update` overrides it
-for one run —
-`omarchy-update-mise` calls `MISE_MINIMUM_RELEASE_AGE=0 mise up`, which is what
-the `mup` alias does by hand.
+Omarchy's `omarchy-update-mise` runs `mise up` with no age gate
+(`MISE_MINIMUM_RELEASE_AGE=0`). This file does not set
+`minimum_release_age` either, so a hand `mise up` and `omarchy update`
+resolve `latest` the same way.
 
 ### Why nothing here duplicates a pacman package
 
