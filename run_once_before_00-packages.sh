@@ -34,8 +34,10 @@ todo=()
 # Omarchy does not ship tailscale. It also installs PipeWire without the
 # Zeroconf split package that supplies libpipewire-module-raop-discover; the
 # audio picker needs that module before its nofail config can discover AirPlay
-# receivers.
-repo_pkgs=(tailscale pipewire-zeroconf)
+# receivers. imagemagick is on the machine already, but only as a transitive
+# dependency (zbar pulls it), and solid-background.hook exits 0 without
+# `magick` -- which would mean no blank backgrounds and no error.
+repo_pkgs=(tailscale pipewire-zeroconf imagemagick)
 
 missing=()
 for pkg in "${repo_pkgs[@]}"; do

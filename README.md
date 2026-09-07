@@ -48,7 +48,7 @@ What this repo is standing on:
 |---|---|
 | Menu row | `dot_config/omarchy/extensions/omarchy-menu.jsonc` — a *Plugins* container holding *Audio output*, *Dev ports*, *USB drives* and *Skills* |
 | Keybinding | `dot_config/hypr/bindings.lua` — `SUPER + ALT + A`, `SUPER + ALT + P`, `SUPER + ALT + U`, `SUPER + ALT + L`, plus `SUPER + hjkl` window focus |
-| Hooks (`theme-set.d`) | starship and omp theme bridges |
+| Hooks (`theme-set.d`) | starship and omp theme bridges, and the blank background per theme |
 | Themed templates | `dot_config/omarchy/themed/{starship.toml,omp.json,fzf.env,skills-sync.env}.tpl` |
 | Floating TUI, no plugin | `dot_config/omarchy/plugins/{jonny.audio,jonny.ports,jonny.usb,jonny.skills}/` |
 | Shared picker library | `dot_config/omarchy/plugins/jonny.lib/vim-fzf.sh` — modal fzf, sourced by the three fzf pickers |
@@ -122,7 +122,7 @@ leaving port 22 shut. Three scripts close that gap:
 
 | Script | Runs | Does |
 |---|---|---|
-| `run_once_before_00-packages.sh` | once per machine, before any file | `tailscale` and `pipewire-zeroconf` from the repos, `tailscaled.service`, `blesh-git` from the AUR, adds you to the `docker` group |
+| `run_once_before_00-packages.sh` | once per machine, before any file | `tailscale`, `pipewire-zeroconf` and `imagemagick` from the repos, `tailscaled.service`, `blesh-git` from the AUR, adds you to the `docker` group |
 | `run_once_after_fingerprint-tod.sh` | once per machine, gated on the reader's USB ID | builds `libfprint-tod` and the matching TOD blob — the executable form of the AUR block in the fingerprint skill guide |
 | `run_onchange_after_mise.sh.tmpl` | when `dot_config/mise/config.toml` changes | `mise install` for the pinned tool set |
 
@@ -991,6 +991,64 @@ whenever the bar is reordered by dragging or by `omarchy bar move`, so expect
 it to drift; re-`chezmoi add` after deliberate layout changes. There is no
 `omarchy bar remove`: taking an entry out means editing the file, and the
 widget only disappears once `omarchy restart shell` has run.
+
+## Blank backgrounds
+
+`dot_config/omarchy/hooks/theme-set.d/executable_solid-background.hook` +
+`run_after_solid-backgrounds.sh` — every theme gets a wallpaper that is nothing
+but its own background colour, and a theme switch lands on it.
+
+The shell's background layer draws an image and only an image:
+`shell/plugins/background/Background.qml` is two `Image` elements following the
+`~/.local/state/omarchy/current/background` symlink, and neither `shell.json`
+nor a theme has a colour to set instead. So "no pattern, just the colour" is a
+one-colour PNG — 3840×2160, about 1 KB, because a flat colour costs a PNG
+nothing — and one per theme, since the colour changes with the palette. All 34
+installed themes come to 196 KB.
+
+The colour is the palette's own `background`, read from the same files
+`omarchy-theme-set` reads: a theme in `~/.config/omarchy/themes` (overlay or
+clone) wins over the packaged one, `color0` covers a `colors.toml` with no
+explicit `background`, and a theme predating `colors.toml` is read from its
+`alacritty.toml`. Nothing is applied or rendered to find it, so a theme can be
+prepared without being set.
+
+Four things that are the way they are for a reason:
+
+- **The file is `0-solid.png`, and the sort order is load-bearing.**
+  `omarchy-theme-set`'s `choose_theme_background` sorts the user background
+  folder and the theme's own folder into one list and, when the outgoing
+  background is not in it — which is every theme switch — takes `[0]`.
+  `~/.config` sorts before `~/.local` and `0` before the digits the stock
+  backgrounds use, so a theme switch arrives on the blank one. The artwork is
+  still one `omarchy theme bg next` away.
+- **It lives in `~/.config/omarchy/backgrounds/<slug>/`**, the user background
+  folder `omarchy theme bg install` opens, not in the theme directory. Nothing
+  there is package-owned, so `omarchy update` cannot remove it, and the
+  switcher lists it beside the theme's images.
+- **An existing file is never rewritten**, which is the whole override
+  mechanism: drop your own `0-solid.png` into a theme's folder and the hook
+  leaves it alone. Deleting one regenerates it on the next theme set.
+- **Every theme is checked on every fire**, not just the one in `$1`, because
+  nothing hooks `omarchy theme install`. Once the folders exist that is one
+  stat per theme, 35 ms. The theme being set is the one case where a fresh file
+  arrives too late — `choose_theme_background` ran before the hooks — so the
+  hook applies a *newly generated* file itself with `omarchy-theme-bg-set`. Only
+  a newly generated one: on any later set the file was already in the list the
+  chooser picked from, and re-applying it would fight `omarchy theme bg next`.
+
+`run_after_solid-backgrounds.sh` exists because the hook fires on
+`omarchy theme set` and nothing else, so a fresh machine would sit on the stock
+wallpapers until the next theme change. It calls the hook with the current
+theme name, and warms the switcher thumbnail cache only when that run is what
+created the file. `run_after_`, not `run_once_`, for the same reason as
+`skills-sync`: the hook is already idempotent, and `once_` state would skip a
+machine where ImageMagick was missing at the time.
+
+Verify on the real surface, not by staring at the PNG: `omarchy theme set` a
+different theme, then `grim` the screen and check the dominant colour is that
+theme's `background` (expect it a shade off — the terminal above it is
+`alpha=0.9`).
 
 ## Menu extensions
 

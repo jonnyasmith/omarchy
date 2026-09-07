@@ -1,0 +1,107 @@
+#!/bin/bash
+#
+# A blank background for every theme.
+#
+# The shell's background layer draws an image and only an image: shell/plugins/
+# background/Background.qml is two Image elements following the
+# ~/.local/state/omarchy/current/background symlink, and neither shell.json nor
+# the theme has a colour to set instead. So "no wallpaper, just the theme's
+# background colour" is a one-colour PNG, and one per theme, because the colour
+# changes with the palette.
+#
+# The file lands in ~/.config/omarchy/backgrounds/<slug>/, the user background
+# folder `omarchy theme bg install` opens, so `omarchy update` cannot touch it
+# and the switcher and `omarchy theme bg next` list it beside the theme's own
+# images.
+#
+# Named 0-solid.png for the sort order. omarchy-theme-set's
+# choose_theme_background sorts the user folder and the theme folder together
+# and, when the outgoing background is not in that list -- which is every theme
+# switch -- takes the first entry. ~/.config sorts before ~/.local, and 0 before
+# any digit the stock backgrounds use, so the blank one is what a theme switch
+# lands on. Cycle to the theme's artwork from there with `omarchy theme bg next`.
+#
+# An existing file is never rewritten. That is the override: drop your own
+# 0-solid.png (or any earlier-sorting name) into a theme's folder and this hook
+# leaves it alone. Deleting one regenerates it on the next theme set.
+#
+# Every theme is checked on every fire, not just the theme in $1, because
+# nothing hooks `omarchy theme install`. The cost once the folders exist is one
+# stat per theme. The theme being set is the one case where a fresh file arrives
+# too late to be picked up: the background for this switch was chosen before the
+# hooks ran, so a newly generated file is applied here by hand.
+
+set -uo pipefail
+
+# No ImageMagick, no PNG. Nothing else in a theme set depends on this, so it is
+# not worth failing the hook chain over.
+command -v magick >/dev/null 2>&1 || exit 0
+
+theme_set="${1:-}"
+sys_themes="${OMARCHY_PATH:-/usr/share/omarchy}/themes"
+usr_themes="$HOME/.config/omarchy/themes"
+backgrounds="$HOME/.config/omarchy/backgrounds"
+
+# The palette's own background colour, from the same files omarchy-theme-set
+# reads: a user theme (an overlay or a clone) wins over the packaged one, and a
+# theme older than colors.toml only has its alacritty.toml. color0 is the
+# fallback Color.qml uses for a colors.toml with no explicit background key.
+theme_background_color() {
+	local slug="$1" dir key file hex
+
+	for dir in "$usr_themes/$slug" "$sys_themes/$slug"; do
+		[[ -d $dir ]] || continue
+		for file in colors.toml alacritty.toml; do
+			[[ -f $dir/$file ]] || continue
+			for key in background color0; do
+				[[ $key == color0 && $file != colors.toml ]] && continue
+				hex=$(sed -nE "s/^[[:space:]]*$key[[:space:]]*=[[:space:]]*[\"']?(#|0x)?([0-9a-fA-F]{6}).*/\2/p" "$dir/$file" | head -1)
+				[[ -n $hex ]] && { printf '#%s\n' "$hex"; return 0; }
+			done
+		done
+	done
+
+	return 1
+}
+
+created=()
+
+while read -r slug; do
+	[[ -n $slug ]] || continue
+	target="$backgrounds/$slug/0-solid.png"
+	[[ -s $target ]] && continue
+
+	if ! color=$(theme_background_color "$slug"); then
+		echo "solid-background.hook: no background colour found for theme $slug" >&2
+		continue
+	fi
+
+	# 4K so it covers either machine's output without the Image element having
+	# to upscale. One flat colour, so the PNG is about 1 KB whatever the size.
+	mkdir -p "$backgrounds/$slug"
+	if magick -size 3840x2160 "xc:$color" "$target" 2>/dev/null; then
+		created+=("$slug")
+	else
+		echo "solid-background.hook: could not write $target" >&2
+	fi
+done < <(
+	for dir in "$sys_themes"/*/ "$usr_themes"/*/; do
+		[[ -d $dir ]] || continue
+		basename "$dir"
+	done | sort -u
+)
+
+# The theme just set only gets its new blank background if it was generated in
+# this run; on any later set the background was already in the list that
+# choose_theme_background picked from, and overriding it here would fight the
+# user's own `omarchy theme bg next`.
+if [[ -n $theme_set && ${#created[@]} -gt 0 ]]; then
+	for slug in "${created[@]}"; do
+		if [[ $slug == "$theme_set" ]]; then
+			omarchy-theme-bg-set "$backgrounds/$slug/0-solid.png" >/dev/null 2>&1
+			break
+		fi
+	done
+fi
+
+exit 0

@@ -132,6 +132,21 @@ See `README.md` for the per-item detail. Summary:
   content is the widget order. There is no `omarchy bar remove`: dropping an
   entry means editing the file, then `omarchy restart shell`, which is also
   what any bar widget QML edit needs — a save alone is not enough.
+- `dot_config/omarchy/hooks/theme-set.d/executable_solid-background.hook` +
+  `run_after_solid-backgrounds.sh` — blank backgrounds: one flat-colour PNG per
+  installed theme, in that theme's own `background` colour, written to
+  `~/.config/omarchy/backgrounds/<slug>/0-solid.png`. The shell's background
+  layer draws an image and only an image, so a colour has to be a file. The
+  name is load-bearing: `omarchy-theme-set` sorts the user folder and the theme
+  folder together and takes the first entry whenever the outgoing background is
+  not in the list, so `0-solid.png` under `~/.config` is what every theme
+  switch lands on, with the artwork one `omarchy theme bg next` away. An
+  existing file is never rewritten — that is how a theme gets a hand-picked
+  background instead. The hook checks every theme on every fire because nothing
+  hooks `omarchy theme install`, and applies a file itself only when it just
+  created it. The `run_after_` twin fires the hook once per apply so a fresh
+  machine does not wait for a theme change. Needs ImageMagick, and exits 0
+  without it. See README before changing the file name or the colour source.
 - `dot_config/omarchy/plugins/jonny.audio/` +
   `dot_config/pipewire/pipewire.conf.d/50-raop-discover.conf` +
   `run_after_airplay-firewall.sh` — audio outputs: local PipeWire sinks and the
