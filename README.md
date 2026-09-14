@@ -777,6 +777,91 @@ Two details are load-bearing:
 A theme with no `colors.toml` renders nothing; the hook then leaves the previous
 file in place and omp keeps the theme it has loaded.
 
+## Claude Code agent config
+
+The other agent CLI on both machines. Four files are tracked; everything else
+under `~/.claude/` is state.
+
+| Source | Target |
+|---|---|
+| `dot_claude/CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` |
+| `dot_claude/settings.json` | `~/.claude/settings.json` |
+| `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` |
+| `dot_claude/themes/private_omarchy.json` | `~/.claude/themes/omarchy.json` |
+
+`settings.json` holds the model (`opus[1m]`), `CLAUDE_CODE_EFFORT_LEVEL`, the
+`dark` theme, the two notification toggles and the `statusLine` command. One key
+in it needs watching against rule 7: `autoMode.environment` is prose the tool
+generates from an interview about the org, its cloud, its registries and its
+protected branches. Every field currently reads *None configured* and the only
+path named is a local repo, which is why the file is tracked as-is. Answer that
+interview on a work machine and the answers land in this repo — re-read the
+block before committing a change to it.
+
+`statusline.sh` is the same status line as omp's, built the only way Claude Code
+offers: no extension API, no segment list, just a command that reads one JSON
+object on stdin and prints one line. It pulls model, effort, cwd, git branch,
+context and both rate-limit windows out of that object with `jq`. Two things in
+it are deliberate. The context segment prints an absolute token count coloured
+against the 200K long-context pricing boundary rather than the percentage of the
+1M window, because the percentage does not say which price tier the next request
+bills at — the window percentage stays as a gray hint. And the dirty marker is
+`git status --porcelain`, which prints nothing for a clean tree, so any output at
+all means dirty; that counts untracked files, unlike `diff-index`.
+
+### The Response section is the only difference from `~/.agents/AGENTS.md`
+
+Both agents read a global instruction file, and both wanted the same Behavior,
+Caution and Git policy. Two copies drifted the moment one was edited, so the
+document lives once, in `.chezmoitemplates/agents/global-instructions.md`, with
+the one paragraph that genuinely differs passed in:
+
+```
+{{ includeTemplate "agents/global-instructions.md" (dict "response" `...`) }}
+```
+
+`dot_agents/AGENTS.md.tmpl` passes the ASD-STE100 brief, `dot_claude/CLAUDE.md.tmpl`
+the anti-mannered-prose brief. The argument is a Go raw string in backticks, not
+a quoted string, because the Claude paragraph quotes phrases and `"` would have
+to be escaped. Edit a shared rule in the `.chezmoitemplates` file and both
+targets change; edit the response brief in the caller and only one does.
+
+Files under `.chezmoitemplates/` are never applied on their own, so there is no
+`~/.chezmoitemplates`. Note also that `.chezmoiignore`'s `AGENTS.md` entry —
+there to stop this repo's own `AGENTS.md` being written to `~` — does not match
+`.agents/AGENTS.md`: chezmoi matches the pattern against the whole target path,
+not the base name at every level like gitignore. `chezmoi managed | grep agents`
+is the check.
+
+### Why the theme is a static file
+
+`themes/omarchy.json` is a hand-written dark palette registered under the name
+*Omarchy*, selected once in the app. It is **not** on the `theme-set.d` pipeline
+the omp and starship themes use, because Claude Code has no reload: it reads the
+theme list at startup, so a file rewritten under a running session does nothing
+until it restarts. Rendering it per Omarchy theme would therefore re-colour only
+the *next* session, which is worse than a fixed palette that never surprises.
+The tradeoff is real — switch to a light Omarchy theme and this stays dark.
+
+### What is deliberately untracked
+
+`dot_claude/` has no `exact_` prefix, so chezmoi adds these four files and leaves
+the rest of the directory alone. That matters, because most of `~/.claude/` must
+not be in a public repo or would be permanent drift:
+
+- `.credentials.json` — a live OAuth token.
+- `history.jsonl`, `sessions/`, `session-env/`, `projects/`, `file-history/`,
+  `tasks/`, `jobs/`, `paste-cache/`, `shell-snapshots/`, `backups/`, `daemon*`,
+  `cache/`, `feedback/` — per-machine session state, and `projects/` keys its
+  directories by absolute path, work checkouts included.
+- `skills/` — 44 symlinks into `~/dev/skills/skills/`, which is its own repo and
+  is what `skills-sync` writes. Tracking them would duplicate that tool's output.
+- `plugins/known_marketplaces.json` — a registry, not config: it records an
+  absolute `installLocation` and a `lastUpdated` timestamp the tool rewrites on
+  every marketplace refresh, so managing it means drift on every run.
+- `chrome/chrome-native-host` — generated, and `exec`s a mise install path with
+  the Claude Code version in it. It is rewritten on upgrade.
+
 ## Neovim
 
 `dot_config/nvim/` is the entire config, not an overlay on Omarchy's. The

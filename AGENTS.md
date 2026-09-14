@@ -334,6 +334,20 @@ See `README.md` for the per-item detail. Summary:
   into an omp theme on every `omarchy theme set` and the hook copies it into
   `~/.omp/agent/themes/`, which live-reloads running sessions. Never let
   anything but omp write `config.yml`.
+- `dot_claude/` + `dot_agents/AGENTS.md.tmpl` +
+  `.chezmoitemplates/agents/global-instructions.md` — the Claude Code agent
+  config: `CLAUDE.md`, `settings.json`, `statusline.sh` (a stdin-JSON command,
+  the only status-line hook that CLI has) and a static `themes/omarchy.json`,
+  which is deliberately *not* on the `theme-set.d` pipeline because Claude Code
+  reads its theme list once at startup. `CLAUDE.md` and `~/.agents/AGENTS.md`
+  differ in one paragraph, so the shared text lives in the `.chezmoitemplates`
+  file and each caller passes its own *Response* brief as a backticked raw
+  string. `dot_claude/` is not `exact_`, which is what keeps the rest of
+  `~/.claude/` — `.credentials.json`, the session and project state, and the
+  `skills/` symlinks into `~/dev/skills` — untracked. `settings.json` holds an
+  `autoMode.environment` block the tool generates from an org interview; it is
+  all *None configured* today, and it is a rule 7 risk if it ever is not. See
+  README.
 - `.chezmoi.toml.tmpl` — the only prompts in the repo: `work`, `workOrgs`,
   `workEmail`, answered once at `chezmoi init` and stored in
   `~/.config/chezmoi/chezmoi.toml`. See rule 7.
