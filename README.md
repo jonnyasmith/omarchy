@@ -703,10 +703,21 @@ directory, so global changes need `mise use -g`.
 settings file for the `oh-my-pi` CLI that the same-named mise
 entry installs. It holds only the keys that differ from the defaults: the
 `nerd` symbol preset with the `pi` composer shape, both theme slots pinned to
-the Omarchy-derived theme below, `anthropic/claude-opus-5:medium` as the default
-model role, thinking blocks hidden, the startup update check off, and the custom
-status line below. `setupVersion` is written by the tool's own first-run setup
-and marks it as already done.
+the Omarchy-derived theme below, the model roles below, thinking blocks hidden
+(`hideThinkingBlock` in the UI, `omitThinking` in what is sent), the startup
+update check off, the GitHub integration on, `dev.autoqaConsent: denied`, and
+the custom status line below. `setupVersion` is written by the tool's own
+first-run setup and marks it as already done.
+
+`modelRoles` is split by what each role is for rather than pinned to one model:
+`anthropic/claude-opus-5:medium` writes code (`default`, and `BUILDER` for
+delegated implementation), `openai-codex/gpt-5.6-terra:medium` takes the roles
+where a second opinion or cheap throughput matters (`smol`, `slow`, `vision`,
+`plan`, `designer`, `commit`, `task`, `advisor`), `CRITIC` is
+`openai-codex/gpt-5.6-sol:medium` so review is not the model that wrote the
+code, and `tiny` is `anthropic/claude-haiku-4-5:high`. omp rewrites this file
+when a role is changed in-session, so expect drift and `chezmoi re-add` after a
+deliberate change.
 
 `statusLine.preset: custom` replaces the stock bar with an explicit segment
 list — `pi model mode collab path git pr context_pct quota` on the left,
@@ -802,8 +813,10 @@ under `~/.claude/` is state.
 | `dot_claude/themes/private_omarchy.json` | `~/.claude/themes/omarchy.json` |
 
 `settings.json` holds the model (`opus[1m]`), `CLAUDE_CODE_EFFORT_LEVEL`, the
-`dark` theme, the two notification toggles and the `statusLine` command. One key
-in it needs watching against rule 7: `autoMode.environment` is prose the tool
+`dark` theme, the two notification toggles, the voice input keys
+(`voiceEnabled` plus `voice.mode: hold`, i.e. push-to-talk rather than
+dictation left running) and the `statusLine` command. One key in it needs
+watching against rule 7: `autoMode.environment` is prose the tool
 generates from an interview about the org, its cloud, its registries and its
 protected branches. Every field currently reads *None configured* and the only
 path named is a local repo, which is why the file is tracked as-is. Answer that
@@ -1081,12 +1094,15 @@ the cluster is hovered and an active one is always shown. There was a custom
 inhibitor; both were dropped, because on and off is the whole requirement.
 
 `dot_config/omarchy/shell.json` is managed anyway, because that is where the
-bar layout and the `idle` timeouts live. Every widget listed in it is now
-Omarchy's own — the one custom entry, `jonny.ports`, went with its widget — so
-the only local content is the order. The shell rewrites this file itself
-whenever the bar is reordered by dragging or by `omarchy bar move`, so expect
-it to drift; re-`chezmoi add` after deliberate layout changes. There is no
-`omarchy bar remove`: taking an entry out means editing the file, and the
+bar layout and the `idle` timeouts live. No widget in it is written here: they
+are Omarchy's own — the one custom entry, `jonny.ports`, went with its widget —
+plus `crmne.hyprmoncfg`, a third-party bar widget and service installed under
+`~/.config/omarchy/plugins/` that restores a saved monitor layout on hotplug,
+lid events and resume. So the only local content is the order, and an entry
+here is dead weight once its plugin directory is gone. The shell rewrites this
+file itself whenever the bar is reordered by dragging or by `omarchy bar move`,
+so expect it to drift; re-`chezmoi add` after deliberate layout changes. There
+is no `omarchy bar remove`: taking an entry out means editing the file, and the
 widget only disappears once `omarchy restart shell` has run.
 
 ## Blank backgrounds

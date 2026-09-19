@@ -127,9 +127,11 @@ See `README.md` for the per-item detail. Summary:
   Glyphs are `\u` escapes: they are private-use codepoints and a literal one is
   easy to lose in transit.
 - `dot_config/omarchy/shell.json` — the bar layout and the `idle` screensaver
-  and lock timeouts. Every widget in it is now Omarchy's own; the one custom
-  entry, `jonny.ports`, went when its bar widget was deleted, so the only local
-  content is the widget order. There is no `omarchy bar remove`: dropping an
+  and lock timeouts. No widget in it is written here: they are Omarchy's own
+  (the one custom entry, `jonny.ports`, went when its bar widget was deleted)
+  plus `crmne.hyprmoncfg`, a third-party multi-monitor plugin installed under
+  `~/.config/omarchy/plugins/`, so the only local content is the widget
+  order. There is no `omarchy bar remove`: dropping an
   entry means editing the file, then `omarchy restart shell`, which is also
   what any bar widget QML edit needs — a save alone is not enough.
 - `dot_config/omarchy/hooks/theme-set.d/executable_solid-background.hook` +

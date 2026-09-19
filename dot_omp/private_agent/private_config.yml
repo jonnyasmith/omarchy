@@ -8,15 +8,17 @@ setupVersion: 2
 defaultThinkingLevel: medium
 modelRoles:
   default: anthropic/claude-opus-5:medium
-  smol: anthropic/claude-opus-5:medium
-  slow: anthropic/claude-opus-5:medium
-  vision: anthropic/claude-opus-5:medium
-  plan: anthropic/claude-opus-5:medium
-  designer: anthropic/claude-opus-5:medium
-  commit: anthropic/claude-opus-5:medium
+  smol: openai-codex/gpt-5.6-terra:medium
+  slow: openai-codex/gpt-5.6-terra:medium
+  vision: openai-codex/gpt-5.6-terra:medium
+  plan: openai-codex/gpt-5.6-terra:medium
+  designer: openai-codex/gpt-5.6-terra:medium
+  commit: openai-codex/gpt-5.6-terra:medium
   tiny: anthropic/claude-haiku-4-5:high
-  task: anthropic/claude-opus-5:medium
-  advisor: anthropic/claude-opus-5:medium
+  task: openai-codex/gpt-5.6-terra:medium
+  advisor: openai-codex/gpt-5.6-terra:medium
+  BUILDER: anthropic/claude-opus-5:medium
+  CRITIC: openai-codex/gpt-5.6-sol:medium
 github:
   enabled: true
 hideThinkingBlock: true
@@ -49,3 +51,6 @@ statusLine:
       showStaged: true
       showUnstaged: true
       showUntracked: true
+dev:
+  autoqaConsent: denied
+omitThinking: true

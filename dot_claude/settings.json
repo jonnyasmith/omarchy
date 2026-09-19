@@ -39,5 +39,10 @@
       "**Trusted repo**: /home/jonny/dev/transport (local-only, no remote configured) — treat as private (no remote to publish to)",
       "**Org-specific CLIs**: None configured"
     ]
+  },
+  "voiceEnabled": true,
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
   }
 }
