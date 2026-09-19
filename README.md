@@ -613,7 +613,7 @@ whole restore path on a new machine.
 
 | Tool | Pin |
 |---|---|
-| `azure-cli`, `claude`, `cmake`, `codex`, `gh`, `glow`, `go`, `hunk`, `oh-my-pi`, `opencode`, `uv`, `zig` | `latest` |
+| `azure-cli`, `azure-functions-core-tools`, `claude`, `cmake`, `codex`, `gh`, `glow`, `go`, `hunk`, `oh-my-pi`, `opencode`, `rust`, `superfile`, `uv`, `zig` | `latest` |
 | `bun` | `1` |
 | `dotnet` | `10`, `8` |
 | `node` | `26`, `24`, `22` |
@@ -633,6 +633,12 @@ installs it twice — `mise ls hunk` listed `aqua:modem-dev/hunk` and `hunk` sid
 by side until the long form was dropped and the orphaned install uninstalled.
 `mise registry <name>` prints the backend a short name resolves to.
 
+`azure-functions-core-tools` is the one entry whose command is not its name: it
+resolves to `vfox:mise-plugins/vfox-azure-functions-core-tools` and installs
+`func`, the Azure Functions host and `func start` / `func azure functionapp
+publish` CLI. `mise ls-remote azure-functions-core-tools` shows the v4 line it
+floats on.
+
 `go-grip` is the one entry pinned to a commit rather than a version, and it is
 the only tool here spelled with its backend, because there is no registry short
 name for it. It renders the markdown half of markup preview (see *Markup
@@ -649,6 +655,12 @@ Omarchy's `omarchy-update-mise` runs `mise up` with no age gate
 (`MISE_MINIMUM_RELEASE_AGE=0`). This file does not set
 `minimum_release_age` either, so a hand `mise up` and `omarchy update`
 resolve `latest` the same way.
+
+`[settings.upgrade] auto_prune = false` is the only setting in the file: `mise
+up` leaves the version it upgraded away from installed instead of uninstalling
+it, so anything pointing at an install directory outside mise keeps working
+until `mise prune` (or the `prune_after` window) clears it. `mise up --prune`
+overrides it for one run.
 
 ### Why nothing here duplicates a pacman package
 

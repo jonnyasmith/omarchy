@@ -1,5 +1,6 @@
 [tools]
 azure-cli = "latest"
+azure-functions-core-tools = "latest"
 bun = "1"
 claude = "latest"
 cmake = "latest"
@@ -15,7 +16,11 @@ oh-my-pi = "latest"
 opencode = "latest"
 pnpm = ["11", "10"]
 python = ["3.14", "3.13"]
+rust = "latest"
 superfile = "latest"
 uv = "latest"
 zig = "latest"
+
+[settings.upgrade]
+auto_prune = false
 
