@@ -8,6 +8,10 @@
     "command": "~/.claude/statusline.sh",
     "padding": 0
   },
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
   "skipWorkflowUsageWarning": true,
   "theme": "dark",
   "inputNeededNotifEnabled": true,
@@ -41,8 +45,5 @@
     ]
   },
   "voiceEnabled": true,
-  "voice": {
-    "enabled": true,
-    "mode": "hold"
-  }
+  "tui": "fullscreen"
 }
