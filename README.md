@@ -2469,7 +2469,7 @@ Four pieces have to agree, and each one is inert without the others:
 |---|---|---|
 | `~/.ssh/config`, `Host <host>-herdr` | `HostName <host>` | an alias only the attach uses |
 | `~/.ssh/config`, `Match originalhost *-herdr` | `RemoteForward <fixed path> ~/.1password/agent.sock` | sends this machine's agent over |
-| `~/.ssh/config`, above `Host *` | `Match exec "test -n \"$SSH_CONNECTION\" && test -S <fixed path>"` → `IdentityAgent <fixed path>` | makes the far end prefer it |
+| `~/.ssh/config`, above `Host *` | `Match exec "test -n \"$SSH_CONNECTION\" && SSH_AUTH_SOCK=<fixed path> ssh-add -l"` → `IdentityAgent <fixed path>` | makes the far end prefer it |
 | remote `sshd` | `StreamLocalBindUnlink yes` | lets attach #2 rebind the path |
 
 That `Match exec` is what makes the forward do anything at all: `ssh_config` is
@@ -2482,6 +2482,13 @@ sends *local* git to the other box's 1Password — the original bug, mirrored.
 `$SSH_CONNECTION` is set by sshd only on the remote end, and a Herdr pane
 inherits it from the server, so together they match exactly the sessions the
 forward was made for. Neither side needs `ForwardAgent`.
+
+The socket is probed with `ssh-add -l` rather than `test -S` because sshd leaves
+the file behind after the connection closes, and a Herdr server started over ssh
+keeps `$SSH_CONNECTION` indefinitely. With `test -S`, local git in that server's
+panes used the dead socket and failed with `Connection refused` (reported by ssh
+as `Load key "...pub": invalid format`). `ssh-add -l` exits 2 when it cannot
+connect, so the match fails and the local agent is used.
 
 `StreamLocalBindUnlink yes` (set by `run_after_sshd-tailnet.sh`) is not optional.
 sshd does not remove a forwarded socket when the connection closes, so without it

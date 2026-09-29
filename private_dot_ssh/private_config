@@ -109,7 +109,13 @@ Match originalhost *-herdr
 # again on a screen nobody is looking at. sshd sets $SSH_CONNECTION only for the
 # remote end, and a Herdr pane inherits it from the server, so this matches
 # exactly the sessions the forward was made for.
-Match exec "test -n \"$SSH_CONNECTION\" && test -S /home/jonny/.ssh/1password-forwarded.sock"
+#
+# The socket must also answer, not merely exist: sshd leaves the file behind when
+# the forwarding connection closes, and a Herdr server started over ssh keeps
+# $SSH_CONNECTION for good, so a local pane would otherwise use the dead socket
+# and fail with "Connection refused". `ssh-add -l` exits 2 when it cannot connect,
+# which fails the match and falls through to the local agent below.
+Match exec "test -n \"$SSH_CONNECTION\" && SSH_AUTH_SOCK=/home/jonny/.ssh/1password-forwarded.sock ssh-add -l >/dev/null 2>&1"
   IdentityAgent /home/jonny/.ssh/1password-forwarded.sock
 
 Host *
