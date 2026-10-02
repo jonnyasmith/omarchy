@@ -54,3 +54,7 @@ statusLine:
 dev:
   autoqaConsent: denied
 omitThinking: true
+skills:
+  # ~/.agents/skills and ~/.claude/skills both link to ~/dev/skills/skills;
+  # read it once, through ~/.agents/skills.
+  enableClaudeUser: false
