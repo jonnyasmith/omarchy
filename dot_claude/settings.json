@@ -2,12 +2,27 @@
   "env": {
     "CLAUDE_CODE_EFFORT_LEVEL": "medium"
   },
-  "model": "opus[1m]",
+  "model": "opus",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "^(startup|resume|clear|compact|fork)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash '/home/jonny/.claude/hooks/herdr-agent-state.sh' session",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
   "statusLine": {
     "type": "command",
     "command": "~/.claude/statusline.sh",
     "padding": 0
   },
+  "feedbackDrafts": "off",
   "voice": {
     "enabled": true,
     "mode": "hold"

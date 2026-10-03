@@ -407,11 +407,18 @@ would pin an old one and fight the installer.
 `dot_omp/private_agent/extensions/` is not an `exact_` directory, so chezmoi
 leaves the file alone.
 
-Only OMP is in the script's list. `herdr integration install` writes into the
-agent's own config tree; for claude, codex and opencode that tree is unmanaged
-here and those agents already have a working manifest, so their hooks would buy
-only native session restore in exchange for an unmanaged write. Add an agent to
-the list when that trade changes, not because its CLI is on PATH.
+The script's list is OMP and claude. Claude has a working manifest, but its
+`SessionStart` hook entry lives in the managed `~/.claude/settings.json`, and
+the script that entry calls, `~/.claude/hooks/herdr-agent-state.sh`, is herdr's
+file (it says so in its header). Without the install a machine would run a
+missing script at every session start. The installer also rewrites the hook
+entry in `settings.json` when the integration version changes, which shows as
+`MM` drift on that file: `chezmoi re-add` it. When the entry is already current
+the installer leaves the file byte-for-byte alone. codex and opencode stay off
+the list: their config trees are unmanaged here and they already have a working
+manifest, so their hooks would buy only native session restore in exchange for
+an unmanaged write. Add an agent to the list when that trade changes, not
+because its CLI is on PATH.
 
 The hook loads when the agent starts, so a pane that was already running keeps
 reporting whatever it reported before. Diagnose with:
@@ -807,12 +814,12 @@ under `~/.claude/` is state.
 
 | Source | Target |
 |---|---|
-| `dot_claude/CLAUDE.md.tmpl` | `~/.claude/CLAUDE.md` |
+| `dot_claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | `dot_claude/settings.json` | `~/.claude/settings.json` |
 | `dot_claude/executable_statusline.sh` | `~/.claude/statusline.sh` |
 | `dot_claude/themes/private_omarchy.json` | `~/.claude/themes/omarchy.json` |
 
-`settings.json` holds the model (`opus[1m]`), `CLAUDE_CODE_EFFORT_LEVEL`, the
+`settings.json` holds the model (`opus`), `CLAUDE_CODE_EFFORT_LEVEL`, the
 `dark` theme, the two notification toggles, the voice input keys
 (`voiceEnabled` plus `voice.mode: hold`, i.e. push-to-talk rather than
 dictation left running) and the `statusLine` command. One key in it needs
@@ -834,29 +841,20 @@ bills at — the window percentage stays as a gray hint. And the dirty marker is
 `git status --porcelain`, which prints nothing for a clean tree, so any output at
 all means dirty; that counts untracked files, unlike `diff-index`.
 
-### The Response section is the only difference from `~/.agents/AGENTS.md`
+### `CLAUDE.md` and `~/.agents/AGENTS.md` are separate files
 
-Both agents read a global instruction file, and both wanted the same Behavior,
-Caution and Git policy. Two copies drifted the moment one was edited, so the
-document lives once, in `.chezmoitemplates/agents/global-instructions.md`, with
-the one paragraph that genuinely differs passed in:
+Both used to render from one shared template in `.chezmoitemplates/agents/`,
+with only the *Response* paragraph passed in per caller. That stopped fitting
+once `CLAUDE.md` gained a *Subagent Models* section naming Claude models
+(`sonnet`, `opus`, `haiku`), which mean nothing to omp, the reader of
+`AGENTS.md`, and dropped the *Behavior*, *Caution* and *Response* sections
+`AGENTS.md` keeps. With almost no text in common, both are now plain files:
+`dot_claude/CLAUDE.md` and `dot_agents/AGENTS.md`. Edit them separately.
 
-```
-{{ includeTemplate "agents/global-instructions.md" (dict "response" `...`) }}
-```
-
-`dot_agents/AGENTS.md.tmpl` passes the ASD-STE100 brief, `dot_claude/CLAUDE.md.tmpl`
-the anti-mannered-prose brief. The argument is a Go raw string in backticks, not
-a quoted string, because the Claude paragraph quotes phrases and `"` would have
-to be escaped. Edit a shared rule in the `.chezmoitemplates` file and both
-targets change; edit the response brief in the caller and only one does.
-
-Files under `.chezmoitemplates/` are never applied on their own, so there is no
-`~/.chezmoitemplates`. Note also that `.chezmoiignore`'s `AGENTS.md` entry —
-there to stop this repo's own `AGENTS.md` being written to `~` — does not match
-`.agents/AGENTS.md`: chezmoi matches the pattern against the whole target path,
-not the base name at every level like gitignore. `chezmoi managed | grep agents`
-is the check.
+Note that `.chezmoiignore`'s `AGENTS.md` entry — there to stop this repo's own
+`AGENTS.md` being written to `~` — does not match `.agents/AGENTS.md`: chezmoi
+matches the pattern against the whole target path, not the base name at every
+level like gitignore. `chezmoi managed | grep agents` is the check.
 
 ### Why the theme is a static file
 

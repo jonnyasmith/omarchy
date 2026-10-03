@@ -13,12 +13,16 @@
 # the sidebar can never show working or blocked. That is the whole reason this
 # script exists.
 #
-# Only agents whose state is *unusable* without the integration are listed.
-# `herdr integration install` writes into the agent's own config tree, and for
-# claude/codex/opencode that tree is not managed by this repo and those agents
-# already have a working manifest, so installing their hooks here would be an
-# unmanaged write that buys only native session restore. Add an agent below
-# when that trade changes, not because its CLI is on PATH.
+# Two kinds of agent are listed. OMP, whose state is *unusable* without the
+# integration. And claude, whose SessionStart hook entry is in the managed
+# ~/.claude/settings.json: the hook script it calls is herdr's file, not
+# chezmoi's, so on a machine without it every Claude session start would run a
+# missing script. `herdr integration install claude` also rewrites that hook
+# entry in settings.json when the integration version changes -- re-add it.
+# It leaves the file untouched when the entry is already current.
+# codex/opencode stay off: their config trees are unmanaged and they already
+# have a working manifest, so a hook would buy only native session restore.
+# Add an agent below when that trade changes, not because its CLI is on PATH.
 #
 # `run_after_`, not `run_onchange_after_`: the version that matters is herdr's,
 # and `herdr update` bumps it outside any apply. Re-checking every apply is two
@@ -38,7 +42,7 @@ set -uo pipefail
 command -v herdr >/dev/null 2>&1 || exit 0
 
 # Agent ids as `herdr integration install` names them.
-agents=(omp)
+agents=(omp claude)
 
 # Both probes come from one status call each, because the list is short and the
 # command talks to no server.
