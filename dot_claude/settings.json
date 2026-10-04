@@ -3,6 +3,10 @@
     "CLAUDE_CODE_EFFORT_LEVEL": "medium"
   },
   "model": "opus[1m]",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "hooks": {
     "SessionStart": [
       {
