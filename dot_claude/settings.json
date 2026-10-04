@@ -2,7 +2,7 @@
   "env": {
     "CLAUDE_CODE_EFFORT_LEVEL": "medium"
   },
-  "model": "opus",
+  "model": "opus[1m]",
   "hooks": {
     "SessionStart": [
       {
